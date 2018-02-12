@@ -1,0 +1,8 @@
+*.pyc
+.metadata
+RemoteSystemsTempFiles
+src/v-plotter-avr/v-plotter-avr/release
+*.bak
+
+
+
