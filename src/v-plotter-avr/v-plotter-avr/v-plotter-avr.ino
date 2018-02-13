@@ -348,8 +348,8 @@ public:
 			//7 +
 			if(bitMap[3] == 8 || bitMap[3] == 8 + 2) leftGo(false, 100000 / pulSpeed);
 			if(bitMap[2] == 8) leftGo(true, 100000 / pulSpeed);
-			if(bitMap[1] == 8) rightGo(false, 100000 / pulSpeed);
-	    	if(bitMap[0] == 8) rightGo(true, 100000 / pulSpeed);
+			if(bitMap[1] == 8) rightGo(true, 100000 / pulSpeed);
+	    	if(bitMap[0] == 8) rightGo(false, 100000 / pulSpeed);
 	    	if(bitMap[2] == 1) printGo(100000 / pulSpeed);
 		}
 
@@ -729,7 +729,7 @@ void vpScrollTo(unsigned long l, unsigned long r) {
 
 }
 
-void vpGoToXY(int x, int y) {
+void vpGoToXY(long x, long y) {
 	//double l = vp.getLl(x, y);
 	//double r = vp.getRl(x, y);
 	vpScrollTo(vp.getLl(x, y), vp.getRl(x, y));
@@ -817,7 +817,7 @@ void loop() {
 			}
 			else if(file) {
 				if(file.available()) {
-					int x=0;
+					long x=0;
 					x = file.read();
 					x += file.read() << 8;
 					x += file.read() << 16;
@@ -825,7 +825,7 @@ void loop() {
 					x = (x * scale) / 100;
 					//Serial.print(i);
 					//Serial.print('\t');
-					int y=0;
+					long y=0;
 					y = file.read();
 					y += file.read() << 8;
 					y += file.read() << 16;
@@ -833,7 +833,7 @@ void loop() {
 					y = (y * scale) / 100;
 					//Serial.print(i);
 					//Serial.print('\t');
-					int p=0;
+					long p=0;
 					p = file.read();
 					p += file.read() << 8;
 					p += file.read() << 16;
@@ -1671,7 +1671,7 @@ void leftGo(bool dir, unsigned int puls) {
 }
 
 void rightGo(bool dir, unsigned int puls) {
-	rightDirAuto = !dir;
+	rightDirAuto = dir;
 	rightPuls = puls;
 }
 
