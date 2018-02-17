@@ -13,6 +13,11 @@
 
 //#define __RTC__
 
+#define TEXT_ID0 "SPRAYBOT"
+#define TEXT_ID1 "V-PLOTTER-AVR"
+
+#define VERSION 1
+
 #include "v.h"
 vPlotter vp;
 
@@ -35,8 +40,7 @@ char keys[KPD_ROWS][KPD_COLS] = {
 
 #define OK_DELAY 500
 
-#define TEXT_ID "V-PLOTTER-AVR"
-#define VERSION 1
+
 
 #define LCD_I2CADDR 0x3F
 const byte LCD_ROWS = 2;
@@ -115,7 +119,7 @@ byte secondsCounter;
 DateTime nowSetClock;
 DateTime now;
 unsigned long milliseconds, millisecondsPrev;
-unsigned long microseconds, microsecondsPrev;
+unsigned long millisPrint, millisPrintPrev;
 bool secToggle = false;
 
 bool stop;
@@ -333,6 +337,10 @@ public:
 			if(bitMap[2] == 4) printMode=1;
 			if(bitMap[1] == 4) printMode=2;
 			if(bitMap[0] == 4) printMode=0;
+
+			if(bitMap[2] == 2) printTime--;
+			if(bitMap[1] == 2) printTime++;
+			if(bitMap[0] == 2) printTime = 0;
 			/*
 			if(bitMap[2] == 2) rightPulMode=1;
 			if(bitMap[1] == 2) rightPulMode=2;
@@ -350,7 +358,8 @@ public:
 			if(bitMap[2] == 8) leftGo(true, 100000 / pulSpeed);
 			if(bitMap[1] == 8) rightGo(true, 100000 / pulSpeed);
 	    	if(bitMap[0] == 8) rightGo(false, 100000 / pulSpeed);
-	    	if(bitMap[2] == 1) printGo(100000 / pulSpeed);
+	    	//if(bitMap[2] == 1) printGo(100000 / pulSpeed);
+	    	if(bitMap[2] == 1) printGo(1);
 		}
 
     	if(bitMap[0] || bitMap[1] || bitMap[2] || bitMap[3]) {
@@ -462,15 +471,15 @@ MENU_ITEM leftDirInv_item   =			{ {"LEFT DIR INV"},    ITEM_VALUE,  0,        ME
 MENU_VALUE printInv_value={ TYPE_BYTE,  1,    0,    MENU_TARGET(&printInv),PRINTINV_ADDR };
 MENU_ITEM printInv_item   =			{ {"PRINT INVERSION"},    ITEM_VALUE,  0,        MENU_TARGET(&printInv_value) };
 
-MENU_LIST const submenu_list5[] = {&distance_item, &x0_item, &y0_item, &leftInitLength_item, &scale_item, &printTime_item, &speed_item, &leftDirInv_item, &rightDirInv_item, &printInv_item, &printMode_item};
+MENU_ITEM item_reset   = 			{ {"RESET DEFAULTS!"},  ITEM_ACTION, 0,        MENU_TARGET(&uiResetAction) };
+//MENU_ITEM item_info   = { {"INFO->"},  ITEM_ACTION, 0,        MENU_TARGET(&uiInfo) };
+
+MENU_LIST const submenu_list5[] = {&distance_item, &x0_item, &y0_item, &leftInitLength_item, &scale_item, &speed_item, &leftDirInv_item, &rightDirInv_item, &printInv_item, &printMode_item, &item_reset};
 
 MENU_ITEM menu_submenu5 = 			{ {"SETTINGS->"},  ITEM_MENU,  MENU_SIZE(submenu_list5),  MENU_TARGET(&submenu_list5) };
 
 MENU_ITEM item_setClock   = 		{ {"SET CLOCK->"},  ITEM_ACTION, 0,        MENU_TARGET(&uiSetClock) };
 //MENU_ITEM item_alarmList   = { {"ALARM LIST->"},  ITEM_ACTION, 0,        MENU_TARGET(&uiFileList) };
-
-MENU_ITEM item_reset   = 			{ {"RESET DEFAULTS!"},  ITEM_ACTION, 0,        MENU_TARGET(&uiResetAction) };
-//MENU_ITEM item_info   = { {"INFO->"},  ITEM_ACTION, 0,        MENU_TARGET(&uiInfo) };
 
 MENU_ITEM item_control   = 			{ {"CALIBRATION"},  ITEM_ACTION, 0,        MENU_TARGET(&uiControl) };
 
@@ -487,7 +496,7 @@ MENU_ITEM fileIndex_item   =		{ {"SELECT FILE"},    ITEM_VALUE,  0,        MENU_
 
 
 //        List of items in menu level
-MENU_LIST const root_list[]   = {  &printFilePause_control, &printFileStart_control, &printFileStop_control, &item_control, &vpGoToXY0_control, &vpGoToXY1_control, &vpGoToinit_control, &fileIndex_item, &menu_submenu5, &item_setClock, &item_reset};//&item_alarmList, &item_testme, , &item_info//&item_bazme, &item_bakme,
+MENU_LIST const root_list[]   = {  &printFilePause_control, &printFileStart_control, &printFileStop_control, &vpGoToinit_control, &item_control, &fileIndex_item, &menu_submenu5, &vpGoToXY0_control, &vpGoToXY1_control, &item_setClock, &printTime_item,};//&item_alarmList, &item_testme, , &item_info//&item_bazme, &item_bakme,
 
 // Root item is always created last, so we can add all other items to it
 MENU_ITEM menu_root     = { {"Root"},        ITEM_MENU,   MENU_SIZE(root_list),    MENU_TARGET(&root_list) };
@@ -540,12 +549,12 @@ void saveDefaultEEPROM() {
 	fileIndex = 2;
 	distance = 3000;
 	leftInitLength = 2500;
-	printTime = 500;
+	printTime = 100;
 	x0 = distance * 0.3;
 	y0 = distance * 0.25;
 	leftDirInv = 0;
-	rightDirInv = 0;
-	printInv = 0;
+	rightDirInv = 1;
+	printInv = 1;
 
     using namespace OMEEPROM;
     write(PRINTMODE_ADDR, printMode);
@@ -598,9 +607,14 @@ void printDirectory(File dir, int numTabs) {
 
 void setup() {
 
-	digitalWrite(PRINT_PIN, true);
+	digitalWrite(PRINT_PIN, false);
 	pinMode(PRINT_PIN, OUTPUT);
 	//digitalWrite(PRINT_PIN, true);
+	if( OMEEPROM::saved() )
+		loadEEPROM();
+	else
+		saveDefaultEEPROM();
+	digitalWrite(PRINT_PIN, !printInv);
 
 	// SD card shield SPI pin does not match Arduino Mega
 	pinMode(10, INPUT);
@@ -610,7 +624,8 @@ void setup() {
 
 	Serial.begin(9600);
 	while(!Serial);
-	Serial.println(TEXT_ID);
+	Serial.println(TEXT_ID0);
+	Serial.println(TEXT_ID1);
 
 
 	//setup2();
@@ -618,7 +633,9 @@ void setup() {
 	kpd.begin( makeKeymap(keys) );
 	lcd.begin(LCD_COLS, LCD_ROWS);
 
-	lcd.print(TEXT_ID);
+	lcd.print(TEXT_ID0);
+	lcd.setCursor(0, 1);
+	lcd.print(TEXT_ID1);
 
     if (!SD.begin(SS)) {
     	Serial.println(F("SD FAILED!"));
@@ -639,10 +656,7 @@ void setup() {
     }
     file.close();
 
-	if( OMEEPROM::saved() )
-		loadEEPROM();
-	else
-		saveDefaultEEPROM();
+
 
 	vp.setSize(distance, x0, y0);
 
@@ -804,6 +818,9 @@ void loop() {
 		if((leftPuls == 0) && (rightPuls == 0) && (printDuration == 0)) {
 			if(bPrint) {
 				bPrint = false;
+
+				printGo(1);
+				/*
 				printGo(printTime);
 				Serial.print(vp.getX(vp.getLength(leftPulsPos), vp.getLength(rightPulsPos)));
 				Serial.print('\t');
@@ -813,6 +830,7 @@ void loop() {
 				Serial.print('\t');
 				Serial.print(vp.getLength(rightPulsPos));
 				Serial.println('\t');
+				*/
 
 			}
 			else if(file) {
@@ -1251,7 +1269,7 @@ void uiScreen() {
 			//lcd.clear();
 			lcd.setCursor(0, 0);
 			if(state == STATE_STOPPED ) {
-			    lcd.print(F("PRINTIG STOPPED"));
+			    lcd.print(F("PRINTING STOPPED"));
 			    uiLcdPrintSpaces8();
 			    lcd.setCursor(0, 1);
 			    uiLcdPrintSpaces8();
@@ -1259,9 +1277,9 @@ void uiScreen() {
 			}
 			else if(state == STATE_RUNNING || state == STATE_PAUSED) {
 				if(state == STATE_PAUSED )
-				    lcd.print(F("PRINTIG PAUSED"));
+				    lcd.print(F("PRINTING PAUSED"));
 				else
-					lcd.print(F("PRINTIG RUNNING"));
+					lcd.print(F("PRINTING RUNNING"));
 			    uiLcdPrintSpaces8();
 			    lcd.setCursor(0, 1);
 				lcd.print(file.position()/12);
@@ -1273,7 +1291,7 @@ void uiScreen() {
 			}
 			/*
 			else if(state == STATE_PAUSED ) {
-			    lcd.print(F("PRINTIG PAUSED"));
+			    lcd.print(F("PRINTING PAUSED"));
 			    uiLcdPrintSpaces8();
 			    lcd.setCursor(0, 1);
 			    uiLcdPrintSpaces8();
@@ -1281,7 +1299,7 @@ void uiScreen() {
 			}
 			*/
 			else if(state == STATE_DONE ) {
-			    lcd.print(F("PRINTIG DONE"));
+			    lcd.print(F("PRINTING DONE"));
 			    uiLcdPrintSpaces8();
 			    lcd.setCursor(0, 1);
 			    uiLcdPrintSpaces8();
@@ -1290,7 +1308,7 @@ void uiScreen() {
 		}
 		if(uiPage == 1) {
 			lcd.setCursor(0, 0);
-			//lcd.print(F("PRINTIG DONE"));
+			//lcd.print(F("PRINTING DONE"));
 			lcd.print(vp.getLength(leftPulsPos));
 		    uiLcdPrintSpaces8();
 
@@ -1392,6 +1410,12 @@ void uiScreen() {
 	}
 
 	if(uiState == UISTATE_FILELIST) {
+
+		if(key == KPD_ENTER) {
+			uiOK();
+			fileIndex = uiPage;
+		}
+
 		if(key == KPD_UP)
 			uiPage--;
 		if(key == KPD_DOWN)
@@ -1399,7 +1423,7 @@ void uiScreen() {
 
 
 		//char msg[MESSAGELENGTH + 1];
-		uiPage = min(uiPage, 14);
+		uiPage = min(uiPage, 15);
 		uiPage = max(uiPage, 0);
 		lcd.setCursor(0, 0);
 		lcd.print(uiPage);
@@ -1409,13 +1433,16 @@ void uiScreen() {
 		lcd.print(fileNames[uiPage]);
 		uiLcdPrintSpaces8();
 		uiLcdPrintSpaces8();
-		lcd.setCursor(0, 1);
-		lcd.print(uiPage + 1);
-		lcd.print(F(": "));
 
-		//readMessage(uiPage + 1, (byte*)msg);
-		//lcd.print(msg);
-		lcd.print(fileNames[uiPage + 1]);
+		lcd.setCursor(0, 1);
+		if(uiPage < 14) {
+			lcd.print(uiPage + 1);
+			lcd.print(F(": "));
+
+			//readMessage(uiPage + 1, (byte*)msg);
+			//lcd.print(msg);
+			lcd.print(fileNames[uiPage + 1]);
+		}
 		uiLcdPrintSpaces8();
 		uiLcdPrintSpaces8();
 
@@ -1604,15 +1631,19 @@ void uiMain() {
 
 	}*/
 	vp.setSize(distance, x0, y0);
+	/*
 	Serial.print(vp.X_SIZE);
 	Serial.print('\t');
 	Serial.print(vp.X_0);
 	Serial.print('\t');
 	Serial.println(vp.Y_0);
+	*/
 
 	lcd.noBacklight();
 	lcd.clear();
-	lcd.print(TEXT_ID);
+	lcd.print(TEXT_ID0);
+	lcd.setCursor(0, 1);
+	lcd.print(TEXT_ID1);
 	//uiState = UISTATE_INFO;
 
 	//uiState = UISTATE_MAIN;
@@ -1677,6 +1708,7 @@ void rightGo(bool dir, unsigned int puls) {
 
 void printGo(unsigned int duration) {
 	printDuration = duration;
+	millisPrintPrev = millis();
 }
 
 /// --------------------------
@@ -1709,21 +1741,29 @@ void timerIsr()
 	}
 
 
-	//microseconds = micros();
-	//if(microseconds >= microsecondsPrev + printTime * 1000) {
-	//	microsecondsPrev = microseconds;
+	millisPrint = millis();
+	if(millisPrint >= (millisPrintPrev + printTime)) {
+		millisPrintPrev = millisPrint;
+		printDuration = 0;
 		//TODO:
-		if(printDuration) {
-			printDuration--;
-			printAuto = true;
-		}
-		else
-			printAuto = false;
-	//}
+		//if(printDuration) {
+		//	printDuration--;
+		//	printAuto = true;
+		//}
+		//else
+		//	printAuto = false;
+	}
+	//TODO:
+	if(printDuration) {
+		//printDuration--;
+		printAuto = true;
+	}
+	else
+		printAuto = false;
 
 
 	printControl = getInstrumentControl(printAuto, printMode);
-	digitalWrite(PRINT_PIN, printInv? printAuto : !printAuto);
+	digitalWrite(PRINT_PIN, printInv? printControl : !printControl);
 	digitalWrite(R_DIR_PIN, rightDirInv? rightDirAuto : !rightDirAuto);
 	digitalWrite(R_PUL_PIN, !rightPulAuto);
 	digitalWrite(L_DIR_PIN, leftDirInv? leftDirAuto: !leftDirAuto);
