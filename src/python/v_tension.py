@@ -3,6 +3,7 @@ from PIL import Image,ImageDraw,ImageOps,ImageFont
 import sys
 from math import sqrt,sin,cos,acos,atan2,degrees,fabs
 
+STEP = 2
 
 # setup the constants
 version=1.7
@@ -90,10 +91,10 @@ def calcPixel(draw,p):
     # default to background color
 
 def drawPixels(draw):
-    for y in range(border,height-border):
+    for y in range(border,height-border, STEP):
         #sys.stdout.write('.')
         #sys.stdout.flush()
-        for x in range(border,width-border):
+        for x in range(border,width-border, STEP):
             calcPixel(draw,(x,y))
     sys.stdout.write('\n')
 

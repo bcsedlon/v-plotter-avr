@@ -139,6 +139,8 @@ bool printControl, rightPulControl, rightDirControl, leftPulControl, leftDirCont
 bool printAuto, rightPulAuto, rightDirAuto, leftPulAuto, leftDirAuto;
 bool leftDirInv, rightDirInv, printInv;
 
+bool printOn, printOff;
+
 // parameters
 unsigned int pulSpeed, scale, fileIndex, distance, leftInitLength, printTime;
 unsigned int pulSpeedPrev; //, distancePrev;
@@ -717,9 +719,9 @@ double analogRead(int pin, int samples){
 
 
 void vpInit() {
-	vp.setSize(3000);
-	leftPulsPos = vp.getStepsTo(2500, 0);
-	rightPulsPos = vp.getStepsTo(2500, 0);
+	vp.setSize(distance);
+	leftPulsPos = vp.getStepsTo(leftInitLength, 0);
+	rightPulsPos = vp.getStepsTo(leftInitLength, 0);
 }
 
 void vpScrollTo(unsigned long l, unsigned long r) {
@@ -868,8 +870,27 @@ void loop() {
 						}
 
 					}
+
+					if(p == 2) {
+						//spray ON
+						bPrint = false;
+						printOn = true;
+						printOff = false;
+					}
+					if(p == 3) {
+						//spray OFF
+						bPrint = false;
+						printOn = false;
+						printOff = true;
+					}
+
 					vpGoToXY(x, y);
-					bPrint = true;
+					if(p == 1) {
+						//spray PULSE
+						bPrint = true;
+						printOn = false;
+						printOff = false;
+					}
 
 				}
 				else {
@@ -1204,7 +1225,7 @@ void uiVpGoToXY1() {
 
 void uiVpGoToInit() {
 	uiOK();
-	vpScrollTo(2500, 2500);
+	vpScrollTo(leftInitLength, leftInitLength);
 }
 
 void uiScreen() {
@@ -1759,6 +1780,11 @@ void timerIsr()
 		printAuto = true;
 	}
 	else
+		printAuto = false;
+
+	if(printOn)
+		printAuto = true;
+	if(printOff)
 		printAuto = false;
 
 

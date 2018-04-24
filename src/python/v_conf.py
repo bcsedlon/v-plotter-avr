@@ -1,4 +1,4 @@
-X_BASE = 3000 #3000 # 4000 #1400 # distance between drives (width) [mm]
+X_BASE = 1500 #3000 #3000 # 4000 #1400 # distance between drives (width) [mm]
 Y_BASE = 2000 #1400 # distance between drives and ground (height) [mm], only limitation, all parameters are calculated from X_BASE
 
 DRIVE_L_START_DISTANCE = 2500 #1100 #X_BASE # initial distance for drive A [mm]
@@ -9,12 +9,13 @@ S_STEP_DISTANCE = 20 #10 #10 # static step distance [mm], for passive drive
 D_STEP_DISTANCE = 20 # 10 #10 # dynamic step distance [mm], for active drive 
 
 #vector print
-L_STEP_DISTANCE = 10 #step for curve drawings [mm]
+L_STEP_DISTANCE = 2#5 #10 #step for curve drawings [mm]
 
 #X_BASE =3000, SVG vikipan1
 SVG_RATIO = 0.75
 
-SPRAY_TIME = 0.14#0.14 #0.13 # 0.15#0.2#1#0.1
+SPRAY_TIME = 0.14 #0.14 #0.13 # 0.15#0.2#1#0.1
+SPRAY_D = 1 #5 # 1 #0.5 # spray diameter for simulation (outputMap)
 
 #spray in separated thread (no waiting)
 #SPRAY_IN_PARALLEL = True 
@@ -32,7 +33,9 @@ DRIVE_IN_PARALLEL =True
 LOG = False
 
 LOGHEX = True
-        
+     
+_PYGAME_ = True     
+_GPIO_ = False     
 
 
 #automatic calculated printing area for best resolution

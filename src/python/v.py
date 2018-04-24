@@ -7,6 +7,8 @@ import v_conf
 from v_conf import SPRAY_IN_PARALLEL, PRU_ENABLE
 
 import struct
+from os.path import basename
+
 
 X_BASE = v_conf.X_BASE
 Y_BASE = v_conf.Y_BASE
@@ -23,6 +25,10 @@ Y_SIZE = v_conf.Y_SIZE
 X_0 = v_conf.X_0
 Y_0 = v_conf.Y_0
 
+SPRAY_DOT = 1
+SPRAY_START = 2
+SPRAY_STOP = 3
+
 LOG = v_conf.LOG
 
 LOGHEX = v_conf.LOGHEX
@@ -31,6 +37,7 @@ PRU_ENABLED = v_conf.PRU_ENABLE
 DRIVE_IN_PARALLEL = v_conf.DRIVE_IN_PARALLEL
 SPRAY_IN_PARALLEL = v_conf.SPRAY_IN_PARALLEL
 
+SPRAY_D = v_conf.SPRAY_D 
 
 #-------------------
 #X_BASE = 4000#1400 # distance between drives (width) [mm]
@@ -48,7 +55,7 @@ SPRAY_IN_PARALLEL = v_conf.SPRAY_IN_PARALLEL
 #L_STEP_DISTANCE = 10 #step for curve drawings [mm]
 #--------------------
 
-SPRAY_D = 5# 1 #0.5 # spray diameter for simulation (outputMap)
+
 
 #print sys.path
 
@@ -60,6 +67,7 @@ _SPRAY_ = False #real spray or draw square
 _PYGAME_ = True
 #_PYGAME_ = False
 PYGAME_RATIO = 0.5
+PYGAME_RATIO = 1 #0.5
 
 #SVG_RATIO = 0.75#0.5#fish 1#0.5
 #SVG_RATIO = 5.6 #calibr1.svg
@@ -80,6 +88,8 @@ import select
 from PIL import Image, ImageDraw, ImageFont
 import datetime
 from threading import Thread
+import os
+import shutil
 
 def writeHex(x, y, s):
     if LOGHEX:
@@ -88,9 +98,19 @@ def writeHex(x, y, s):
             logFileHex = open('log.vpl', 'wb+')
         logFileHex.write(struct.pack('i', x))
         logFileHex.write(struct.pack('i', y))
-        s = 1
+        #s = 1
         logFileHex.write(struct.pack('i', s))
         #logFileHex.write(x + y +  '0\n')
+        
+def saveHex(filename):
+    if LOGHEX:
+        global logFileHex
+        logFileHex.close()
+        shutil.copy ('log.vpl', filename)
+        print "> Log saved"
+    else:
+        print "> Log is disabled in v_conf"      
+
         
 def readHex(file):
     #logFileHex = open('log.vpl', 'wb+') 
@@ -109,11 +129,15 @@ def conf():
     global DRIVE_IN_PARALLEL
     global SPRAY_IN_PARALLEL
     global _GPIO_
-    PRU_ENABLE = v_conf.conf("> Enable PRU?", PRU_ENABLE)
-    DRIVE_IN_PARALLEL = v_conf.conf("> Enable drive in parallel?", DRIVE_IN_PARALLEL)
-    SPRAY_IN_PARALLEL = v_conf.conf("> Enable spray in parallel?", SPRAY_IN_PARALLEL)
+    #PRU_ENABLE = v_conf.conf("> Enable PRU?", PRU_ENABLE)
+    #DRIVE_IN_PARALLEL = v_conf.conf("> Enable drive in parallel?", DRIVE_IN_PARALLEL)
+    #SPRAY_IN_PARALLEL = v_conf.conf("> Enable spray in parallel?", SPRAY_IN_PARALLEL)
+    PRU_ENABLE = v_conf.PRU_ENABLE
+    DRIVE_IN_PARALLEL = v_conf.DRIVE_IN_PARALLEL
+    SPRAY_IN_PARALLEL = v_conf.SPRAY_IN_PARALLEL
     
-_GPIO_ = v_conf.conf("> Enable GPIO?", _GPIO_)
+#_GPIO_ = v_conf.conf("> Enable GPIO?", _GPIO_)
+_GPIO_ = v_conf._GPIO_
 
 conf()
 
@@ -174,7 +198,8 @@ if _GPIO_:
 #if _GPIO_:
 		#moveStepper.init()
 
-_PYGAME_ = v_conf.conf("> Enable PYGAME?", _PYGAME_)
+#_PYGAME_ = v_conf.conf("> Enable PYGAME?", _PYGAME_)
+_PYGAME_ = v_conf._PYGAME_
 if _PYGAME_:
         import pygame
 
@@ -485,17 +510,20 @@ class v_plotterHW:
                 time.sleep(1)
         v_plotterHW.bSpray = b
         
-    @staticmethod
-    def scrollToXY(x, y):
     
-        writeHex(x, y, 1)
+    
+    
+    @staticmethod
+    def scrollToXY2(x, y, s):
+    
+        writeHex(x, y, s)
                 
         Ll = int(round(v_plotter.getLl(x, y)))
         Rl = int(round(v_plotter.getRl(x, y)))
         
-        #if not v_plotterHW.bSpray:
-        #    outputMap.sprayLine(v_plotter.getX(v_plotterHW.driveL.l, v_plotterHW.driveR.l) + X_0, (v_plotter.getY(v_plotterHW.driveL.l, v_plotterHW.driveR.l) + Y_0), v_plotter.getX(Ll, Rl) + X_0, v_plotter.getY(Ll, Rl) + Y_0)
-        #    pygameGui.sprayLine(v_plotter.getX(v_plotterHW.driveL.l, v_plotterHW.driveR.l) + X_0, (v_plotter.getY(v_plotterHW.driveL.l, v_plotterHW.driveR.l) + Y_0), v_plotter.getX(Ll, Rl) + X_0, v_plotter.getY(Ll, Rl) + Y_0)
+        if v_plotterHW.bSpray:
+            outputMap.sprayLine(v_plotter.getX(v_plotterHW.driveL.l, v_plotterHW.driveR.l) + X_0, (v_plotter.getY(v_plotterHW.driveL.l, v_plotterHW.driveR.l) + Y_0), v_plotter.getX(Ll, Rl) + X_0, v_plotter.getY(Ll, Rl) + Y_0)
+            pygameGui.sprayLine(v_plotter.getX(v_plotterHW.driveL.l, v_plotterHW.driveR.l) + X_0, (v_plotter.getY(v_plotterHW.driveL.l, v_plotterHW.driveR.l) + Y_0), v_plotter.getX(Ll, Rl) + X_0, v_plotter.getY(Ll, Rl) + Y_0)
         
         #lcdHW.displayInfo(Ll, Rl)
         #gui.printInfo(1)
@@ -576,7 +604,17 @@ class v_plotterHW:
             v_plotterHW.driveL.scrollTo(Ll)
             v_plotterHW.driveR.scrollTo(Rl)
         #print ">"
+        
+    @staticmethod
+    def scrollToXY(x, y):
+        v_plotterHW.scrollToXY2(x, y, SPRAY_DOT)
 
+    @staticmethod
+    def scrollToXYLine(x, y):
+        if v_plotterHW.bSpray:
+            v_plotterHW.scrollToXY2(x, y, SPRAY_START)
+        else:
+            v_plotterHW.scrollToXY2(x, y, SPRAY_STOP)
 
 # ---------------------------------------------------------
 # V-PLOTTER
@@ -652,36 +690,36 @@ class v_plotter:
            o = int(int(raw_input("> set X_0 test offset (0 - 0.3) * 10: ")) * 0.1 * X_BASE) 
         except:
             o = 0
-        v_plotterHW.sprayGPIO2(True)      
-        v_plotterHW.scrollToXY(0, 0)
-        v_plotterHW.sprayGPIO2(False)
+        v_plotterHW.sprayGPIO2(False)      
+        v_plotterHW.scrollToXYLine(0, 0)
+        v_plotterHW.sprayGPIO2(True)
         
         x = 0
         y = 0   
         s =  int(L_STEP_DISTANCE * 0.2)   
         for x in range (0, X_SIZE, s):
-            v_plotterHW.scrollToXY(x, y)
+            v_plotterHW.scrollToXYLine(x, y)
         for y in range (0, Y_SIZE, s):
-            v_plotterHW.scrollToXY(x, y)
+            v_plotterHW.scrollToXYLine(x, y)
         for x in range (X_SIZE, 0, -s):
-            v_plotterHW.scrollToXY(x, y) 
+            v_plotterHW.scrollToXYline(x, y) 
         for y in range (Y_SIZE, 0, -s):
-            v_plotterHW.scrollToXY(x, y)   
+            v_plotterHW.scrollToXYLine(x, y)   
             
         return
         #o = int(X_BASE * 0.2)
         for x in range (0, -o, -s):
-            v_plotterHW.scrollToXY(x, y)
+            v_plotterHW.scrollToXYLine(x, y)
         for y in range (0, Y_SIZE, s):
-            v_plotterHW.scrollToXY(x, y)
+            v_plotterHW.scrollToXYLine(x, y)
         for x in range (-o, X_SIZE + o, s):
-            v_plotterHW.scrollToXY(x, y)
+            v_plotterHW.scrollToXYLine(x, y)
         for y in range (Y_SIZE, 0, -s):
-            v_plotterHW.scrollToXY(x, y) 
+            v_plotterHW.scrollToXYLine(x, y) 
         for x in range (X_SIZE + o, 0, -s):
-            v_plotterHW.scrollToXY(x, y)  
+            v_plotterHW.scrollToXYLine(x, y)  
         
-        v_plotterHW.sprayGPIO2(True)   
+        v_plotterHW.sprayGPIO2(False)   
         
         
     @staticmethod                                    
@@ -767,6 +805,7 @@ class v_plotter:
 			
             l =  path.length(error=1e-5) * SVG_RATIO
 					
+            #for i in range(0, int(l)):
             for i in range(0, int(l), L_STEP_DISTANCE):
                 if heardEnter():
                         gui.printInfo(1)
@@ -802,11 +841,11 @@ class v_plotter:
 
         for path in paths:
         #print path
-            v_plotterHW.sprayGPIO2(True)
-            
+            v_plotterHW.sprayGPIO2(False)
             #time.sleep(1)
             l =  path.length(error=1e-5) * SVG_RATIO
-            for i in range(0, int(l)):
+            #for i in range(0, int(l)):
+            for i in range(0, int(l), L_STEP_DISTANCE):
                 if heardEnter():
                         gui.printInfo(1)
                         print("> vPlottSVGlines paused")
@@ -821,15 +860,15 @@ class v_plotter:
                 #v_plotterHW.sprayGPIO2(True)
                 print path.point(i / l)
                 point = path.point(i / l)
-                v_plotterHW.scrollToXY(point.real * SVG_RATIO, point.imag * SVG_RATIO)
-                        
-            
-                v_plotterHW.sprayGPIO2(False)
+                v_plotterHW.scrollToXYLine(point.real * SVG_RATIO, point.imag * SVG_RATIO)
+                v_plotterHW.sprayGPIO2(True)
+            v_plotterHW.sprayGPIO2(False)
                 
-        v_plotterHW.sprayGPIO2(True)       
+        v_plotterHW.sprayGPIO2(False)       
     
     @staticmethod
     def vPlottHex(filename, scale):
+        v_plotterHW.sprayGPIO2(False)
         with open(filename, 'rb') as file:
             r = readHex(file)
             while r is not None:
@@ -837,8 +876,15 @@ class v_plotter:
                 x = x * scale
                 y = y * scale
                 #print(str(x) + ';\t' + str(y) + ';\t: ' + str(s))
-                v_plotterHW.scrollToXY(x, y)
-                v_plotterHW.sprayGPIO(s)
+                if s == SPRAY_START:
+                    v_plotterHW.sprayGPIO2(True)
+                if s == SPRAY_STOP:
+                    v_plotterHW.sprayGPIO2(False)
+                
+                v_plotterHW.scrollToXYLine(x, y)
+                
+                if s == SPRAY_DOT:
+                    v_plotterHW.sprayGPIO(s)
                 r = readHex(file)
                 
 # ---------------------------------------------------------
@@ -1164,20 +1210,62 @@ class gui:
                 filename = inputPatternSVG.getFilename('./data-svg') 
                 if filename == 0:
                     return
+                    
+                try:
+                        s = int(raw_input("> Set scale [%]: "))
+                        s = s / 100.0
+                except:
+                        s = 1
+                SVG_RATIO = s
                 
                 outputMap.init()
                 pygameGui.reset()
+                
+                if LOGHEX:
+                    global logFileHex
+                    logFileHex.close()
+                    
                 v_plotter.vPlottSVG(inputPatternSVG.getSVGpaths(filename))
+   
+                #path, filename = os.path.split(filename)
+                filename = os.path.splitext(basename(filename))[0]
+                filenameVPL = './vpl/' + filename + '_d.vpl'
+                saveHex(filenameVPL)  
+                filenamePNG = './png/' + filename + '_d.png'
+                outputMap.save(filenamePNG)
+                
+   
                 
             if displayMenu == 15:
                 
                 filename = inputPatternSVG.getFilename('./data-svg') 
                 if filename == 0:
                     return
+                try:
+                        s = int(raw_input("> Set scale [%]: "))
+                        s = s / 100.0
+                except:
+                        s = 1
+                SVG_RATIO = s
+                
                 
                 outputMap.init()
                 pygameGui.reset()
+                
+                if LOGHEX:
+                    global logFileHex
+                    logFileHex.close()
+                
+                
                 v_plotter.vPlottSVGlines(inputPatternSVG.getSVGpaths(filename))
+                
+                #path, filename = os.path.split(filename)
+                #filename = basename(filename)
+                filename = os.path.splitext(basename(filename))[0]
+                filenameVPL = './vpl/' + filename + '_l.vpl'
+                saveHex(filenameVPL)  
+                filenamePNG = './png/' + filename + '_l.png'
+                outputMap.save(filenamePNG)
                 
             if displayMenu == 16:
                 v_plotter.calibrateLines()
@@ -1271,12 +1359,14 @@ class gui:
                     print "> Log is disabled in v_conf"       
 
             if displayMenu == 34:
+                filename = inputPatternSVG.getFilename('./vpl') 
+
                 try:
                         s = int(raw_input("> Set scale [%]: "))
                         s = s / 100
                 except:
-                        s = 100
-                filename = inputPatternSVG.getFilename('./vpl') 
+                        s = 1
+                        
                 outputMap.init()
                 pygameGui.reset()
                 v_plotter.vPlottHex(filename, s)                                
@@ -1394,7 +1484,11 @@ class inputPatternSVG:
         for elem in tree.iter():
             print "TAG:  ", elem.tag
             if elem.tag == "{http://www.w3.org/2000/svg}path":
-                paths.append(parse_path(elem.attrib.get('d')))
+                #print parse_path(elem.attrib.get('d'))[0]
+                #paths.append(parse_path(elem.attrib.get('d')))
+                for segment in parse_path(elem.attrib.get('d')):
+                    paths.append(segment)
+                
            
         #for path in paths:
         #    print path 
@@ -1416,13 +1510,25 @@ class pygameGui:
         if _PYGAME_:
             x = int(round(x * PYGAME_RATIO))
             y = int(round(y * PYGAME_RATIO))
-            pygame.draw.circle(pygameGui.window, WHITE, (x, y), int(SPRAY_D * 2))
+            #pygame.draw.circle(pygameGui.window, WHITE, (x, y), int(SPRAY_D * 2))
+            pygame.draw.circle(pygameGui.window, BLACK, (x, y), int(SPRAY_D * 2))
             pygame.display.flip() 
     
     @staticmethod
     def reset():
 	if _PYGAME_:
-        	pygameGui.window.fill(BLACK)
+        	#pygameGui.window.fill(BLACK)
+            img = pygame.image.load('v_tension.png') 
+            w = int(3000 * PYGAME_RATIO)
+            h = int(2000 * PYGAME_RATIO)
+            w = int(X_BASE * PYGAME_RATIO)
+            h = int(Y_BASE* PYGAME_RATIO)
+            size=(w,h)
+            
+            img = pygame.transform.scale(img, size)
+            screen = pygame.display.set_mode(size) 
+            screen.blit(img,(0,0))
+            pygame.display.flip() # update the display
             
     @staticmethod
     def drawPreviews():
@@ -1485,7 +1591,7 @@ class pygameGui:
             x1 = int(round(x1 * PYGAME_RATIO))
             y1 = int(round(y1 * PYGAME_RATIO))
             
-            pygame.draw.line(pygameGui.window, WHITE, (x0, y0), (x1, y1), int(SPRAY_D * 2))
+            pygame.draw.line(pygameGui.window, BLUE, (x0, y0), (x1, y1), int(SPRAY_D * 2))
             pygame.display.flip() 
                
 # ---------------------------------------------------------
