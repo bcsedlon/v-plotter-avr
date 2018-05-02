@@ -31,6 +31,8 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/v-plotter-avr/libraries/SPI/src}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/v-plotter-avr/libraries/SD}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/v-plotter-avr/libraries/SD/src}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/v-plotter-avr/libraries/Servo}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/v-plotter-avr/libraries/Servo/src}&quot;"/>
 								</option>
 								<inputType id="it.baeyens.arduino.compiler.cpp.sketch.input.1395044225" name="CPP source files" superClass="it.baeyens.arduino.compiler.cpp.sketch.input"/>
 							</tool>
@@ -48,6 +50,8 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/v-plotter-avr/libraries/SPI/src}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/v-plotter-avr/libraries/SD}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/v-plotter-avr/libraries/SD/src}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/v-plotter-avr/libraries/Servo}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/v-plotter-avr/libraries/Servo/src}&quot;"/>
 								</option>
 								<inputType id="it.baeyens.arduino.compiler.c.sketch.input.1212418511" name="C Source Files" superClass="it.baeyens.arduino.compiler.c.sketch.input"/>
 							</tool>

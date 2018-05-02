@@ -13,10 +13,16 @@
 
 //#define __RTC__
 
-#define TEXT_ID0 "SPRAYBOT"
+#define TEXT_ID0 "GRAFFITYBOT"
 #define TEXT_ID1 "V-PLOTTER-AVR"
 
 #define VERSION 1
+
+#define SERVO_PIN 7
+#include <Servo.h>
+Servo servo;
+byte servoPrintDelay, servoPrintOnPos, servoPrintOffPos;
+
 
 #include "v.h"
 vPlotter vp;
@@ -69,6 +75,9 @@ const byte LCD_COLS = 16;
 #define LDIRINV_ADDR	44
 #define RDIRINV_ADDR	48
 #define PRINTINV_ADDR	52
+#define SERVOPRINTDELAY_ADDR	56
+#define SERVOPRINTOFFPOS_ADDR	60
+#define SERVOPRINTONPOS_ADDR	64
 
 #define MESSAGE_CMD_REQUEST  	"#?"
 
@@ -473,10 +482,17 @@ MENU_ITEM leftDirInv_item   =			{ {"LEFT DIR INV"},    ITEM_VALUE,  0,        ME
 MENU_VALUE printInv_value={ TYPE_BYTE,  1,    0,    MENU_TARGET(&printInv),PRINTINV_ADDR };
 MENU_ITEM printInv_item   =			{ {"PRINT INVERSION"},    ITEM_VALUE,  0,        MENU_TARGET(&printInv_value) };
 
+MENU_VALUE servoPrintDelay_value={ TYPE_BYTE,  0,    0,    MENU_TARGET(&servoPrintDelay),SERVOPRINTDELAY_ADDR };
+MENU_ITEM servoPrintDelay_item   =			{ {"SERVO DELAY"},    ITEM_VALUE,  0,        MENU_TARGET(&servoPrintDelay_value) };
+MENU_VALUE servoPrintOffPos_value={ TYPE_BYTE,  0,    0,    MENU_TARGET(&servoPrintOffPos),SERVOPRINTOFFPOS_ADDR };
+MENU_ITEM servoPrintOffPos_item   =			{ {"SERVO OFF POS"},    ITEM_VALUE,  0,        MENU_TARGET(&servoPrintOffPos_value) };
+MENU_VALUE servoPrintOnPos_value={ TYPE_BYTE,  0,    0,    MENU_TARGET(&servoPrintOnPos),SERVOPRINTONPOS_ADDR };
+MENU_ITEM servoPrintOnPos_item   =			{ {"SERVO ON POS"},    ITEM_VALUE,  0,        MENU_TARGET(&servoPrintOnPos_value) };
+
 MENU_ITEM item_reset   = 			{ {"RESET DEFAULTS!"},  ITEM_ACTION, 0,        MENU_TARGET(&uiResetAction) };
 //MENU_ITEM item_info   = { {"INFO->"},  ITEM_ACTION, 0,        MENU_TARGET(&uiInfo) };
 
-MENU_LIST const submenu_list5[] = {&distance_item, &x0_item, &y0_item, &leftInitLength_item, &scale_item, &speed_item, &leftDirInv_item, &rightDirInv_item, &printInv_item, &printMode_item, &item_reset};
+MENU_LIST const submenu_list5[] = {&distance_item, &x0_item, &y0_item, &leftInitLength_item, &scale_item, &speed_item, &leftDirInv_item, &rightDirInv_item, &printInv_item, &printMode_item, &servoPrintDelay_item, &servoPrintOffPos_item, &servoPrintOnPos_item, &item_reset};
 
 MENU_ITEM menu_submenu5 = 			{ {"SETTINGS->"},  ITEM_MENU,  MENU_SIZE(submenu_list5),  MENU_TARGET(&submenu_list5) };
 
@@ -538,6 +554,10 @@ void loadEEPROM() {
     read(LDIRINV_ADDR, leftDirInv);
     read(RDIRINV_ADDR, rightDirInv);
     read(PRINTINV_ADDR, printInv);
+
+    read(SERVOPRINTDELAY_ADDR, servoPrintDelay);
+    read(SERVOPRINTOFFPOS_ADDR, servoPrintOffPos);
+    read(SERVOPRINTONPOS_ADDR, servoPrintOnPos);
     //for(int i=0; i < 16; i++) {
     //     OMEEPROM::read(GSMNUMBER_ADDR + i, *(gsmNumber+i));
     //}
@@ -557,6 +577,9 @@ void saveDefaultEEPROM() {
 	leftDirInv = 0;
 	rightDirInv = 1;
 	printInv = 1;
+	servoPrintDelay = 250;
+	servoPrintOffPos = 10;
+	servoPrintOnPos = 170;
 
     using namespace OMEEPROM;
     write(PRINTMODE_ADDR, printMode);
@@ -571,6 +594,10 @@ void saveDefaultEEPROM() {
     write(LDIRINV_ADDR, leftDirInv);
     write(RDIRINV_ADDR, rightDirInv);
     write(PRINTINV_ADDR, printInv);
+
+    write(SERVOPRINTDELAY_ADDR, servoPrintDelay);
+    write(SERVOPRINTOFFPOS_ADDR, servoPrintOffPos);
+    write(SERVOPRINTONPOS_ADDR, servoPrintOnPos);
 }
 
 void printDirectory(File dir, int numTabs) {
@@ -612,6 +639,10 @@ void setup() {
 	digitalWrite(PRINT_PIN, false);
 	pinMode(PRINT_PIN, OUTPUT);
 	//digitalWrite(PRINT_PIN, true);
+
+	servo.attach(SERVO_PIN);
+
+
 	if( OMEEPROM::saved() )
 		loadEEPROM();
 	else
@@ -819,6 +850,7 @@ void loop() {
 	if(state == STATE_RUNNING) {
 		if((leftPuls == 0) && (rightPuls == 0) && (printDuration == 0)) {
 			if(bPrint) {
+
 				bPrint = false;
 
 				printGo(1);
@@ -896,6 +928,7 @@ void loop() {
 				else {
 					state = STATE_DONE;
 					file.close();
+					vpScrollTo(leftInitLength, leftInitLength);
 				}
 			}
 		}
@@ -1325,6 +1358,7 @@ void uiScreen() {
 			    lcd.setCursor(0, 1);
 			    uiLcdPrintSpaces8();
 			    uiLcdPrintSpaces8();
+
 			}
 		}
 		if(uiPage == 1) {
@@ -1730,6 +1764,12 @@ void rightGo(bool dir, unsigned int puls) {
 void printGo(unsigned int duration) {
 	printDuration = duration;
 	millisPrintPrev = millis();
+
+	//TODO:
+	servo.write(servoPrintOnPos);
+	delay(servoPrintDelay);
+	servo.write(servoPrintOffPos);
+	delay(servoPrintDelay);
 }
 
 /// --------------------------
@@ -1782,11 +1822,28 @@ void timerIsr()
 	else
 		printAuto = false;
 
-	if(printOn)
+	if(printOn) {
 		printAuto = true;
-	if(printOff)
-		printAuto = false;
+	}
 
+	if(printOff) {
+		printAuto = false;
+	}
+
+	if(printAuto) {
+		if(servo.read() != servoPrintOnPos) {
+			servo.write(servoPrintOnPos);
+			//TODO: remove delay from ISR
+			delay(servoPrintDelay);
+		}
+	}
+	else {
+		if(servo.read() != servoPrintOffPos) {
+			servo.write(servoPrintOffPos);
+			//TODO: remove delay from ISR
+			delay(servoPrintDelay);
+		}
+	}
 
 	printControl = getInstrumentControl(printAuto, printMode);
 	digitalWrite(PRINT_PIN, printInv? printControl : !printControl);
