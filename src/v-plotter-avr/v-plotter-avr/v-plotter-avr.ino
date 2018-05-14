@@ -13,7 +13,7 @@
 
 //#define __RTC__
 
-#define TEXT_ID0 "GRAFFITYBOT"
+#define TEXT_ID0 "GRAFFITIBOT"
 #define TEXT_ID1 "V-PLOTTER-AVR"
 
 #define VERSION 1
@@ -55,10 +55,10 @@ const byte LCD_COLS = 16;
 #define LED_PIN 13
 
 #define PRINT_PIN 6//12 //5
-#define R_DIR_PIN 2//10 //6
-#define R_PUL_PIN 3//11 //7
-#define L_DIR_PIN 4//8
-#define L_PUL_PIN 5//9
+#define R_DIR_PIN 4//2//10 //6
+#define R_PUL_PIN 5//3//11 //7
+#define L_DIR_PIN 2//4//8
+#define L_PUL_PIN 3//5//9
 
 #define DS3231_I2C_ADDRESS 0x68
 
@@ -265,7 +265,7 @@ public:
 
 
     	getKeys();
-
+    	Serial.println("3b");
     	if(bitMap[0] & 1) {
     	    		if(bitMap[1] & 1) {
     	    			//lcd.begin(LCD_COLS, LCD_ROWS);
@@ -485,14 +485,15 @@ MENU_ITEM printInv_item   =			{ {"PRINT INVERSION"},    ITEM_VALUE,  0,        M
 MENU_VALUE servoPrintDelay_value={ TYPE_BYTE,  0,    0,    MENU_TARGET(&servoPrintDelay),SERVOPRINTDELAY_ADDR };
 MENU_ITEM servoPrintDelay_item   =			{ {"SERVO DELAY"},    ITEM_VALUE,  0,        MENU_TARGET(&servoPrintDelay_value) };
 MENU_VALUE servoPrintOffPos_value={ TYPE_BYTE,  0,    0,    MENU_TARGET(&servoPrintOffPos),SERVOPRINTOFFPOS_ADDR };
-MENU_ITEM servoPrintOffPos_item   =			{ {"SERVO OFF POS"},    ITEM_VALUE,  0,        MENU_TARGET(&servoPrintOffPos_value) };
+MENU_ITEM servoPrintOffPos_item   =			{ {"SERVO NOPRINT POS"},    ITEM_VALUE,  0,        MENU_TARGET(&servoPrintOffPos_value) };
 MENU_VALUE servoPrintOnPos_value={ TYPE_BYTE,  0,    0,    MENU_TARGET(&servoPrintOnPos),SERVOPRINTONPOS_ADDR };
-MENU_ITEM servoPrintOnPos_item   =			{ {"SERVO ON POS"},    ITEM_VALUE,  0,        MENU_TARGET(&servoPrintOnPos_value) };
+MENU_ITEM servoPrintOnPos_item   =			{ {"SERVO PRINT POS"},    ITEM_VALUE,  0,        MENU_TARGET(&servoPrintOnPos_value) };
 
 MENU_ITEM item_reset   = 			{ {"RESET DEFAULTS!"},  ITEM_ACTION, 0,        MENU_TARGET(&uiResetAction) };
 //MENU_ITEM item_info   = { {"INFO->"},  ITEM_ACTION, 0,        MENU_TARGET(&uiInfo) };
 
 MENU_LIST const submenu_list5[] = {&distance_item, &x0_item, &y0_item, &leftInitLength_item, &scale_item, &speed_item, &leftDirInv_item, &rightDirInv_item, &printInv_item, &printMode_item, &servoPrintDelay_item, &servoPrintOffPos_item, &servoPrintOnPos_item, &item_reset};
+//MENU_LIST const submenu_list5[] = {&distance_item, &x0_item, &y0_item, &leftInitLength_item, &scale_item, &speed_item, &leftDirInv_item, &rightDirInv_item, &printInv_item, &printMode_item, &item_reset};
 
 MENU_ITEM menu_submenu5 = 			{ {"SETTINGS->"},  ITEM_MENU,  MENU_SIZE(submenu_list5),  MENU_TARGET(&submenu_list5) };
 
@@ -577,7 +578,7 @@ void saveDefaultEEPROM() {
 	leftDirInv = 0;
 	rightDirInv = 1;
 	printInv = 1;
-	servoPrintDelay = 250;
+	servoPrintDelay = 0;
 	servoPrintOffPos = 10;
 	servoPrintOnPos = 170;
 
@@ -649,6 +650,8 @@ void setup() {
 		saveDefaultEEPROM();
 	digitalWrite(PRINT_PIN, !printInv);
 
+
+
 	// SD card shield SPI pin does not match Arduino Mega
 	pinMode(10, INPUT);
 	pinMode(11, INPUT);
@@ -693,7 +696,7 @@ void setup() {
 
 	vp.setSize(distance, x0, y0);
 
-	pulSpeed= max(100, pulSpeed);
+	pulSpeed= max(200, pulSpeed);
 	Timer3.initialize(pulSpeed); // set a timer of length 100000 microseconds (or 0.1 sec - or 10Hz => the led will blink 5 times, 5 cycles of on-and-off, per second)
 	Timer3.attachInterrupt( timerIsr ); // attach the service routine here
 	//Timer1.setPeriod();
@@ -793,6 +796,7 @@ bool bPrint;
 void loop() {
 
 	//wdt_reset();
+	Serial.println("1");
 
 #ifdef __RTC__
 	now = rtc.now();
@@ -810,6 +814,7 @@ void loop() {
 		secToggle ? secToggle = false : secToggle = true;
 		millisecondsPrev = millis();
 	}
+	Serial.println("2");
 
 	if (!Menu.shown()) {
 		if(!uiState) {
@@ -817,7 +822,10 @@ void loop() {
 			//uiMain();
 		}
 	}
+
+	Serial.println("3");
 	char key = kpd.getKey2();
+	Serial.println("3a");
 	if(key == '#') {
 			uiState = 0;
 			uiPage = 0;
@@ -844,8 +852,9 @@ void loop() {
 		}
 
 	}
+	Serial.println("4");
 	Menu.checkInput();
-
+	Serial.println("5");
 
 	if(state == STATE_RUNNING) {
 		if((leftPuls == 0) && (rightPuls == 0) && (printDuration == 0)) {
@@ -928,11 +937,14 @@ void loop() {
 				else {
 					state = STATE_DONE;
 					file.close();
+					servo.write(servoPrintOffPos);
+					//delay(servoPrintDelay);
 					vpScrollTo(leftInitLength, leftInitLength);
 				}
 			}
 		}
 	}
+	Serial.println("3");
 
 
 	//////////////////////////////////
@@ -1022,7 +1034,6 @@ void loop() {
 
   		pos = text.indexOf(MESSAGE_CMD_PARREADINT);
   		if (pos >= 0) {
-  			serialPrintParInt(text.substring(pos + strlen(MESSAGE_CMD_PARREADINT)).toInt());
   		}
   		pos = text.indexOf(MESSAGE_CMD_PARREADFLOAT);
   		if (pos >= 0) {
@@ -1767,9 +1778,9 @@ void printGo(unsigned int duration) {
 
 	//TODO:
 	servo.write(servoPrintOnPos);
-	delay(servoPrintDelay);
+	//delay(servoPrintDelay);
 	servo.write(servoPrintOffPos);
-	delay(servoPrintDelay);
+	//delay(servoPrintDelay);
 }
 
 /// --------------------------
@@ -1777,8 +1788,11 @@ void printGo(unsigned int duration) {
 /// --------------------------
 void timerIsr()
 {
+	//Serial.println("isr begin");
+
 	if(stop) {
 		digitalWrite(PRINT_PIN, !printAuto);
+		//Serial.println("isr end");
 		return;
 	}
 
@@ -1831,18 +1845,18 @@ void timerIsr()
 	}
 
 	if(printAuto) {
-		if(servo.read() != servoPrintOnPos) {
+		//if(servo.read() != servoPrintOnPos) {
 			servo.write(servoPrintOnPos);
 			//TODO: remove delay from ISR
-			delay(servoPrintDelay);
-		}
+			//delay(servoPrintDelay);
+		//}
 	}
 	else {
-		if(servo.read() != servoPrintOffPos) {
+		//if(servo.read() != servoPrintOffPos) {
 			servo.write(servoPrintOffPos);
 			//TODO: remove delay from ISR
-			delay(servoPrintDelay);
-		}
+			//delay(servoPrintDelay);
+		//}
 	}
 
 	printControl = getInstrumentControl(printAuto, printMode);
@@ -1852,5 +1866,5 @@ void timerIsr()
 	digitalWrite(L_DIR_PIN, leftDirInv? leftDirAuto: !leftDirAuto);
 	digitalWrite(L_PUL_PIN, !leftPulAuto);
 
-
+	//Serial.println("isr end");
 }
