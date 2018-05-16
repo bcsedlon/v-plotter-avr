@@ -21,7 +21,10 @@
 #define SERVO_PIN 7
 #include <Servo.h>
 Servo servo;
-byte servoPrintDelay, servoPrintOnPos, servoPrintOffPos;
+byte servoPrintOnPos, servoPrintOffPos, servoPrintPos;
+unsigned int servoPrintDelay;
+bool servoPrintMoving = false;
+
 
 
 #include "v.h"
@@ -79,13 +82,21 @@ const byte LCD_COLS = 16;
 #define SERVOPRINTOFFPOS_ADDR	60
 #define SERVOPRINTONPOS_ADDR	64
 
-#define MESSAGE_CMD_REQUEST  	"#?"
+#define MESSAGE_CMD_REQUEST  	"?"
 
 #define MESSAGE_CMD_PARREADINT 		"#PRI"
 #define MESSAGE_CMD_PARREADFLOAT 	"#PRF"
 #define MESSAGE_CMD_PARWRITEINT 	"#PWI"
 #define MESSAGE_CMD_PARWRITEFLOAT 	"#PWF"
 #define MESSAGE_CMD_PARRELOAD 		"#PLD"
+
+#define MESSAGE_CMD_SETX 		"X"
+#define MESSAGE_CMD_SETY 		"Y"
+#define MESSAGE_CMD_SETZ 		"Z"
+#define MESSAGE_CMD_EXE 		"E"
+#define MESSAGE_CMD_SETL 		"L"
+#define MESSAGE_CMD_SETR 		"R"
+#define MESSAGE_CMD_SCROLL 		"S"
 
 #define UISTATE_MAIN 		0
 #define UISTATE_FILELIST 	1
@@ -115,7 +126,8 @@ const byte LCD_COLS = 16;
 
 byte state = 0;
 
-char fileNames[16][16];
+#define  FILES_NUM 32
+char fileNames[FILES_NUM][16];
 int fileNamesIndex;
 File file;
 bool sd = false;
@@ -141,7 +153,7 @@ unsigned long cycles, cyclesPrev = 0;
 
 unsigned long printDuration, leftPuls, rightPuls = 0;
 unsigned long leftPulsPos, rightPulsPos;
-
+unsigned long lComm, rComm;
 // control
 byte printMode, rightDirMode, rightPulMode, leftPulMode, leftDirMode;;
 bool printControl, rightPulControl, rightDirControl, leftPulControl, leftDirControl;
@@ -155,6 +167,9 @@ unsigned int pulSpeed, scale, fileIndex, distance, leftInitLength, printTime;
 unsigned int pulSpeedPrev; //, distancePrev;
 
 int x0, y0;
+
+int xComm, yComm, zComm;
+
 /*
 unsigned int fileIndex = 2;
 unsigned int distance = 3000;
@@ -265,7 +280,6 @@ public:
 
 
     	getKeys();
-    	Serial.println("3b");
     	if(bitMap[0] & 1) {
     	    		if(bitMap[1] & 1) {
     	    			//lcd.begin(LCD_COLS, LCD_ROWS);
@@ -482,7 +496,7 @@ MENU_ITEM leftDirInv_item   =			{ {"LEFT DIR INV"},    ITEM_VALUE,  0,        ME
 MENU_VALUE printInv_value={ TYPE_BYTE,  1,    0,    MENU_TARGET(&printInv),PRINTINV_ADDR };
 MENU_ITEM printInv_item   =			{ {"PRINT INVERSION"},    ITEM_VALUE,  0,        MENU_TARGET(&printInv_value) };
 
-MENU_VALUE servoPrintDelay_value={ TYPE_BYTE,  0,    0,    MENU_TARGET(&servoPrintDelay),SERVOPRINTDELAY_ADDR };
+MENU_VALUE servoPrintDelay_value={ TYPE_UINT,  0,    0,    MENU_TARGET(&servoPrintDelay),SERVOPRINTDELAY_ADDR };
 MENU_ITEM servoPrintDelay_item   =			{ {"SERVO DELAY"},    ITEM_VALUE,  0,        MENU_TARGET(&servoPrintDelay_value) };
 MENU_VALUE servoPrintOffPos_value={ TYPE_BYTE,  0,    0,    MENU_TARGET(&servoPrintOffPos),SERVOPRINTOFFPOS_ADDR };
 MENU_ITEM servoPrintOffPos_item   =			{ {"SERVO NOPRINT POS"},    ITEM_VALUE,  0,        MENU_TARGET(&servoPrintOffPos_value) };
@@ -492,7 +506,7 @@ MENU_ITEM servoPrintOnPos_item   =			{ {"SERVO PRINT POS"},    ITEM_VALUE,  0,  
 MENU_ITEM item_reset   = 			{ {"RESET DEFAULTS!"},  ITEM_ACTION, 0,        MENU_TARGET(&uiResetAction) };
 //MENU_ITEM item_info   = { {"INFO->"},  ITEM_ACTION, 0,        MENU_TARGET(&uiInfo) };
 
-MENU_LIST const submenu_list5[] = {&distance_item, &x0_item, &y0_item, &leftInitLength_item, &scale_item, &speed_item, &leftDirInv_item, &rightDirInv_item, &printInv_item, &printMode_item, &servoPrintDelay_item, &servoPrintOffPos_item, &servoPrintOnPos_item, &item_reset};
+MENU_LIST const submenu_list5[] = {&distance_item, &x0_item, &y0_item, &leftInitLength_item, &scale_item, &speed_item, &leftDirInv_item, &rightDirInv_item, &printInv_item, &printMode_item, &printTime_item, &servoPrintDelay_item, &servoPrintOffPos_item, &servoPrintOnPos_item, &item_reset};
 //MENU_LIST const submenu_list5[] = {&distance_item, &x0_item, &y0_item, &leftInitLength_item, &scale_item, &speed_item, &leftDirInv_item, &rightDirInv_item, &printInv_item, &printMode_item, &item_reset};
 
 MENU_ITEM menu_submenu5 = 			{ {"SETTINGS->"},  ITEM_MENU,  MENU_SIZE(submenu_list5),  MENU_TARGET(&submenu_list5) };
@@ -515,7 +529,7 @@ MENU_ITEM fileIndex_item   =		{ {"SELECT FILE"},    ITEM_VALUE,  0,        MENU_
 
 
 //        List of items in menu level
-MENU_LIST const root_list[]   = {  &printFilePause_control, &printFileStart_control, &printFileStop_control, &vpGoToinit_control, &item_control, &fileIndex_item, &menu_submenu5, &vpGoToXY0_control, &vpGoToXY1_control, &item_setClock, &printTime_item,};//&item_alarmList, &item_testme, , &item_info//&item_bazme, &item_bakme,
+MENU_LIST const root_list[]   = {&printFilePause_control, &printFileStart_control, &printFileStop_control, &vpGoToinit_control, &item_control, &fileIndex_item, &menu_submenu5, &vpGoToXY0_control, &vpGoToXY1_control}; //, &item_setClock, &printTime_item,};//&item_alarmList, &item_testme, , &item_info//&item_bazme, &item_bakme,
 
 // Root item is always created last, so we can add all other items to it
 MENU_ITEM menu_root     = { {"Root"},        ITEM_MENU,   MENU_SIZE(root_list),    MENU_TARGET(&root_list) };
@@ -566,8 +580,10 @@ void loadEEPROM() {
 
 void saveDefaultEEPROM() {
 	// save defaults
+	/*
+	// 3000
 	printMode = 0;
-	pulSpeed = 100;
+	pulSpeed = 200;
 	scale = 100;
 	fileIndex = 2;
 	distance = 3000;
@@ -581,6 +597,22 @@ void saveDefaultEEPROM() {
 	servoPrintDelay = 0;
 	servoPrintOffPos = 10;
 	servoPrintOnPos = 170;
+	*/
+	printMode = 0;
+	pulSpeed = 200;
+	scale = 100;
+	fileIndex = 2;
+	distance = 1500;
+	leftInitLength = 1500;
+	printTime = 0;
+	x0 = distance * 0.3;
+	y0 = distance * 0.25;
+	leftDirInv = 0;
+	rightDirInv = 1;
+	printInv = 0;
+	servoPrintDelay = 500;
+	servoPrintOffPos = 150;
+	servoPrintOnPos = 100;
 
     using namespace OMEEPROM;
     write(PRINTMODE_ADDR, printMode);
@@ -613,7 +645,7 @@ void printDirectory(File dir, int numTabs) {
     //}
     //Serial.print(entry.name());
 
-    if(fileNamesIndex < 16) {
+    if(fileNamesIndex < FILES_NUM) {
     	strcpy((char *)fileNames[fileNamesIndex++], (const char*)entry.name());
     }
 
@@ -641,7 +673,7 @@ void setup() {
 	pinMode(PRINT_PIN, OUTPUT);
 	//digitalWrite(PRINT_PIN, true);
 
-	servo.attach(SERVO_PIN);
+
 
 
 	if( OMEEPROM::saved() )
@@ -650,7 +682,9 @@ void setup() {
 		saveDefaultEEPROM();
 	digitalWrite(PRINT_PIN, !printInv);
 
-
+	servo.attach(SERVO_PIN);
+	servoPrintPos = servoPrintOffPos;
+	servo.write(servoPrintPos);
 
 	// SD card shield SPI pin does not match Arduino Mega
 	pinMode(10, INPUT);
@@ -658,11 +692,16 @@ void setup() {
 	pinMode(12, INPUT);
 	pinMode(13, INPUT);
 
-	Serial.begin(9600);
+	Serial.begin(115200);
 	while(!Serial);
+	//Serial1.begin(115200);
+	Serial1.begin(9600);
+	while(!Serial1);
+
 	Serial.println(TEXT_ID0);
 	Serial.println(TEXT_ID1);
-
+	Serial1.println(TEXT_ID0);
+	Serial1.println(TEXT_ID1);
 
 	//setup2();
 	Wire.begin( );
@@ -796,7 +835,6 @@ bool bPrint;
 void loop() {
 
 	//wdt_reset();
-	Serial.println("1");
 
 #ifdef __RTC__
 	now = rtc.now();
@@ -814,7 +852,6 @@ void loop() {
 		secToggle ? secToggle = false : secToggle = true;
 		millisecondsPrev = millis();
 	}
-	Serial.println("2");
 
 	if (!Menu.shown()) {
 		if(!uiState) {
@@ -823,9 +860,7 @@ void loop() {
 		}
 	}
 
-	Serial.println("3");
 	char key = kpd.getKey2();
-	Serial.println("3a");
 	if(key == '#') {
 			uiState = 0;
 			uiPage = 0;
@@ -852,9 +887,7 @@ void loop() {
 		}
 
 	}
-	Serial.println("4");
 	Menu.checkInput();
-	Serial.println("5");
 
 	if(state == STATE_RUNNING) {
 		if((leftPuls == 0) && (rightPuls == 0) && (printDuration == 0)) {
@@ -913,24 +946,51 @@ void loop() {
 					}
 
 					if(p == 2) {
-						//spray ON
+						//print ON
 						bPrint = false;
 						printOn = true;
 						printOff = false;
+
+
+						if(servoPrintPos != servoPrintOnPos) {
+							servoPrintMoving = true;
+							servoPrintPos = servoPrintOnPos;
+							servo.write(servoPrintPos);
+							delay(servoPrintDelay);
+							servoPrintMoving = false;
+						}
 					}
 					if(p == 3) {
-						//spray OFF
+						//print OFF
 						bPrint = false;
 						printOn = false;
 						printOff = true;
+
+						if(servoPrintPos != servoPrintOffPos) {
+							servoPrintMoving = true;
+							servoPrintPos = servoPrintOffPos;
+							servo.write(servoPrintPos);
+							delay(servoPrintDelay);
+							servoPrintMoving = false;
+						}
 					}
 
 					vpGoToXY(x, y);
 					if(p == 1) {
-						//spray PULSE
+						//print PULSE
 						bPrint = true;
 						printOn = false;
 						printOff = false;
+
+						//TODO:
+						servoPrintMoving = true;
+						servoPrintPos = servoPrintOnPos;
+						servo.write(servoPrintPos);
+						delay(servoPrintDelay);
+						servoPrintPos = servoPrintOffPos;
+						servo.write(servoPrintPos);
+						delay(servoPrintDelay);
+						servoPrintMoving = false;
 					}
 
 				}
@@ -944,7 +1004,6 @@ void loop() {
 			}
 		}
 	}
-	Serial.println("3");
 
 
 	//////////////////////////////////
@@ -1023,8 +1082,16 @@ void loop() {
 	//////////////////////////////////
 	// communication
 	//////////////////////////////////
+
+	String text;
   	if (Serial.available() > 0) {
-  		String text = Serial.readString();
+  		text = Serial.readString();
+  	}
+  	if (Serial1.available() > 0)  {
+  	  	text = Serial1.readString();
+  	}
+
+  	if(text) {
   		int pos;
   		//Serial.println(text);
 
@@ -1034,6 +1101,7 @@ void loop() {
 
   		pos = text.indexOf(MESSAGE_CMD_PARREADINT);
   		if (pos >= 0) {
+  			serialPrintParInt(text.substring(pos + strlen(MESSAGE_CMD_PARREADFLOAT)).toInt());
   		}
   		pos = text.indexOf(MESSAGE_CMD_PARREADFLOAT);
   		if (pos >= 0) {
@@ -1058,7 +1126,62 @@ void loop() {
   			loadEEPROM();
   		}
 
+  		pos = text.indexOf(MESSAGE_CMD_SETX);
+  		if (pos >= 0) {
+  			xComm = text.substring(pos + strlen(MESSAGE_CMD_SETX)).toInt();
+  		}
+  		pos = text.indexOf(MESSAGE_CMD_SETY);
+  		if (pos >= 0) {
+  			yComm = text.substring(pos + strlen(MESSAGE_CMD_SETY)).toInt();
+  		}
+  		pos = text.indexOf(MESSAGE_CMD_SETZ);
+		if (pos >= 0) {
+			zComm = text.substring(pos + strlen(MESSAGE_CMD_SETZ)).toInt();
+		}
+		pos = text.indexOf(MESSAGE_CMD_EXE);
+		if (pos >= 0) {
+			servoPrintPos = zComm;
+			servo.write(servoPrintPos);
+			vpGoToXY(xComm, yComm);
+
+			Serial.println(xComm);
+			Serial.println(yComm);
+			Serial.println(zComm);
+
+			Serial1.println(xComm);
+			Serial1.println(yComm);
+			Serial1.println(zComm);
+			//Serial.println();
+		}
+		pos = text.indexOf(MESSAGE_CMD_SETL);
+		if (pos >= 0) {
+			lComm = (unsigned long)text.substring(pos + strlen(MESSAGE_CMD_SETL)).toInt();
+		}
+		pos = text.indexOf(MESSAGE_CMD_SETR);
+		if (pos >= 0) {
+			rComm = (unsigned long)text.substring(pos + strlen(MESSAGE_CMD_SETR)).toInt();
+		}
+		pos = text.indexOf(MESSAGE_CMD_SCROLL);
+		if (pos >= 0) {
+			servoPrintPos = zComm;
+			servo.write(servoPrintPos);
+			vpScrollTo(lComm, rComm);
+			Serial.println(rComm);
+			Serial.println(lComm);
+			Serial.println(zComm);
+
+			Serial1.println(rComm);
+			Serial1.println(lComm);
+			Serial1.println(zComm);
+			//Serial.println();
+		}
+
+
 		if (text.indexOf(MESSAGE_CMD_REQUEST)!=-1 ) {
+
+			Serial.println(max(leftPuls, rightPuls));
+			Serial1.println(max(leftPuls, rightPuls));
+
 			/*
 			Serial.println();
 
@@ -1102,8 +1225,8 @@ void loop() {
   				Serial.println(msg);
   			}
 			*/
-  			Serial.println();
-  			Serial.println();
+  			//Serial.println();
+  			//Serial.println();
    		}
   	}
 }
@@ -1175,6 +1298,8 @@ void uiPrintFileStop() {
 	uiKeyTime = 0;
 	uiKeyPressed = 0;
 
+	servoPrintPos = servoPrintOffPos;
+	servo.write(servoPrintPos);
 	//lcd.clear();
 	//lcd.setCursor(0, 0);
 			  //"0123456789ABCDEF"
@@ -1189,7 +1314,7 @@ void uiPrintFileStop() {
 
 void uiPrintFileStart() {
 
-	lcd.noBacklight();
+	//lcd.noBacklight();
 
 	Menu.enable(false);
 	uiPage=0;
@@ -1269,6 +1394,12 @@ void uiVpGoToXY1() {
 
 void uiVpGoToInit() {
 	uiOK();
+
+	if(servoPrintPos != servoPrintOffPos) {
+		servoPrintPos = servoPrintOffPos;
+		servo.write(servoPrintPos);
+		delay(servoPrintDelay);
+	}
 	vpScrollTo(leftInitLength, leftInitLength);
 }
 
@@ -1327,7 +1458,7 @@ void uiScreen() {
 			//lcd.clear();
 		}
 		uiPage = max(0, uiPage);
-		uiPage = min(6, uiPage);
+		uiPage = min(7, uiPage);
 
 		if(uiPage == 0) {
 			//TODO: once per ?
@@ -1464,6 +1595,16 @@ void uiScreen() {
 		}
 		if(uiPage == 6) {
 		    lcd.setCursor(0, 0);
+			lcd.print(F("SERVO T[ms]:"));
+			lcd.print(servoPrintDelay);
+			uiLcdPrintSpaces8();
+			lcd.setCursor(0, 1);
+			lcd.print(F("SERVO POS[]:"));
+			lcd.print(servoPrintPos);
+			uiLcdPrintSpaces8();
+		}
+		if(uiPage == 7) {
+		    lcd.setCursor(0, 0);
 			lcd.print(F("SCALE[%]:"));
 			lcd.print(scale);
 			uiLcdPrintSpaces8();
@@ -1489,7 +1630,7 @@ void uiScreen() {
 
 
 		//char msg[MESSAGELENGTH + 1];
-		uiPage = min(uiPage, 15);
+		uiPage = min(uiPage, FILES_NUM);
 		uiPage = max(uiPage, 0);
 		lcd.setCursor(0, 0);
 		lcd.print(uiPage);
@@ -1501,7 +1642,7 @@ void uiScreen() {
 		uiLcdPrintSpaces8();
 
 		lcd.setCursor(0, 1);
-		if(uiPage < 14) {
+		if(uiPage < FILES_NUM - 1) {
 			lcd.print(uiPage + 1);
 			lcd.print(F(": "));
 
@@ -1776,11 +1917,13 @@ void printGo(unsigned int duration) {
 	printDuration = duration;
 	millisPrintPrev = millis();
 
-	//TODO:
-	servo.write(servoPrintOnPos);
-	//delay(servoPrintDelay);
-	servo.write(servoPrintOffPos);
-	//delay(servoPrintDelay);
+	//TODO://TODO:
+	servoPrintPos = servoPrintOnPos;
+	servo.write(servoPrintPos);
+	delay(servoPrintDelay);
+	servoPrintPos = servoPrintOffPos;
+	servo.write(servoPrintPos);
+	delay(servoPrintDelay);
 }
 
 /// --------------------------
@@ -1788,14 +1931,12 @@ void printGo(unsigned int duration) {
 /// --------------------------
 void timerIsr()
 {
-	//Serial.println("isr begin");
-
 	if(stop) {
 		digitalWrite(PRINT_PIN, !printAuto);
-		//Serial.println("isr end");
 		return;
 	}
 
+	/*
 	if(rightPuls) {
 		rightPuls--;
 		rightPulAuto = !rightPulAuto;
@@ -1814,28 +1955,49 @@ void timerIsr()
 		else
 			leftPulsPos--;
 	}
+	*/
 
+	if(servoPrintMoving)
+		return;
+
+	rightPulAuto ^= bool(rightPuls);
+	rightPuls -= bool(rightPuls);
+
+	leftPulAuto ^= bool(leftPuls);
+	leftPuls -= bool(leftPuls);
+
+	digitalWrite(R_DIR_PIN, rightDirInv? rightDirAuto : !rightDirAuto);
+	digitalWrite(R_PUL_PIN, !rightPulAuto);
+	digitalWrite(L_DIR_PIN, leftDirInv? leftDirAuto: !leftDirAuto);
+	digitalWrite(L_PUL_PIN, !leftPulAuto);
+
+
+	if(rightPuls) {
+		if(rightDirAuto)
+			rightPulsPos++;
+		else
+			rightPulsPos--;
+	}
+	if(leftPuls) {
+		if(leftDirAuto)
+			leftPulsPos++;
+		else
+			leftPulsPos--;
+	}
 
 	millisPrint = millis();
-	if(millisPrint >= (millisPrintPrev + printTime)) {
+	if(millisPrint - printTime >= millisPrintPrev) {
 		millisPrintPrev = millisPrint;
 		printDuration = 0;
-		//TODO:
-		//if(printDuration) {
-		//	printDuration--;
-		//	printAuto = true;
-		//}
-		//else
-		//	printAuto = false;
 	}
-	//TODO:
-	if(printDuration) {
-		//printDuration--;
+
+	if(printDuration)
 		printAuto = true;
-	}
 	else
 		printAuto = false;
 
+
+	/*
 	if(printOn) {
 		printAuto = true;
 	}
@@ -1847,24 +2009,16 @@ void timerIsr()
 	if(printAuto) {
 		//if(servo.read() != servoPrintOnPos) {
 			servo.write(servoPrintOnPos);
-			//TODO: remove delay from ISR
-			//delay(servoPrintDelay);
 		//}
 	}
 	else {
 		//if(servo.read() != servoPrintOffPos) {
 			servo.write(servoPrintOffPos);
-			//TODO: remove delay from ISR
-			//delay(servoPrintDelay);
 		//}
 	}
+	*/
 
 	printControl = getInstrumentControl(printAuto, printMode);
 	digitalWrite(PRINT_PIN, printInv? printControl : !printControl);
-	digitalWrite(R_DIR_PIN, rightDirInv? rightDirAuto : !rightDirAuto);
-	digitalWrite(R_PUL_PIN, !rightPulAuto);
-	digitalWrite(L_DIR_PIN, leftDirInv? leftDirAuto: !leftDirAuto);
-	digitalWrite(L_PUL_PIN, !leftPulAuto);
 
-	//Serial.println("isr end");
 }
