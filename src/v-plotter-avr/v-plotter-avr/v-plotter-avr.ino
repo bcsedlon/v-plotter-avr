@@ -698,6 +698,9 @@ void setup() {
 	Serial1.begin(9600);
 	while(!Serial1);
 
+	Serial.setTimeout(20);
+	Serial1.setTimeout(20);
+
 	Serial.println(TEXT_ID0);
 	Serial.println(TEXT_ID1);
 	Serial1.println(TEXT_ID0);
