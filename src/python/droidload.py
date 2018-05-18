@@ -19,6 +19,7 @@ def btspp2file_write(data):
         print(e)
 
 def btspp2file_read():
+    data = None
     try:
         timeout = 0
         while not os.path.exists(os.path.join(path, 'rx.txt')):
@@ -27,10 +28,9 @@ def btspp2file_read():
             if timeout > 40:
                raise Exception('btspp2file read timeout')
         with open(os.path.join(path, 'rx.txt'), 'r') as infile:
-            data = ''
+            
             for line in infile:
-                data =  data + line
-        return data        
+                data =  data + line   
         
     except Exception as e: 
         print(e)
@@ -39,6 +39,8 @@ def btspp2file_read():
         os.remove(os.path.join(path, 'rx.txt'))
     except:
         pass
+        
+     return data   
         
 if __name__ == "__main__":
 

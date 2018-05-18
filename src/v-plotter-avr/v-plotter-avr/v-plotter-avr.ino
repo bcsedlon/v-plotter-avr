@@ -98,6 +98,8 @@ const byte LCD_COLS = 16;
 #define MESSAGE_CMD_SETR 		"R"
 #define MESSAGE_CMD_SCROLL 		"S"
 
+#define MESSAGE_CMD_FILE 		"#F"
+
 #define UISTATE_MAIN 		0
 #define UISTATE_FILELIST 	1
 #define UISTATE_SETCLOCK 	2
@@ -506,7 +508,7 @@ MENU_ITEM servoPrintOnPos_item   =			{ {"SERVO PRINT POS"},    ITEM_VALUE,  0,  
 MENU_ITEM item_reset   = 			{ {"RESET DEFAULTS!"},  ITEM_ACTION, 0,        MENU_TARGET(&uiResetAction) };
 //MENU_ITEM item_info   = { {"INFO->"},  ITEM_ACTION, 0,        MENU_TARGET(&uiInfo) };
 
-MENU_LIST const submenu_list5[] = {&distance_item, &x0_item, &y0_item, &leftInitLength_item, &scale_item, &speed_item, &leftDirInv_item, &rightDirInv_item, &printInv_item, &printMode_item, &printTime_item, &servoPrintDelay_item, &servoPrintOffPos_item, &servoPrintOnPos_item, &item_reset};
+MENU_LIST const submenu_list5[] = {&speed_item, &distance_item, &x0_item, &y0_item, &leftInitLength_item, &scale_item, &leftDirInv_item, &rightDirInv_item, &printInv_item, &printMode_item, &printTime_item, &servoPrintDelay_item, &servoPrintOffPos_item, &servoPrintOnPos_item, &item_reset};
 //MENU_LIST const submenu_list5[] = {&distance_item, &x0_item, &y0_item, &leftInitLength_item, &scale_item, &speed_item, &leftDirInv_item, &rightDirInv_item, &printInv_item, &printMode_item, &item_reset};
 
 MENU_ITEM menu_submenu5 = 			{ {"SETTINGS->"},  ITEM_MENU,  MENU_SIZE(submenu_list5),  MENU_TARGET(&submenu_list5) };
@@ -1177,6 +1179,63 @@ void loop() {
 			Serial1.println(lComm);
 			Serial1.println(zComm);
 			//Serial.println();
+		}
+
+		pos = text.indexOf(MESSAGE_CMD_FILE);
+		if (pos >= 0 && sd) {
+			//pos + strlen(MESSAGE_CMD_FILE)
+
+			Menu.enable(false);
+			lcd.clear();
+			lcd.setCursor(0, 0);
+			lcd.print(F("FILE TRANSFER"));
+
+			unsigned long fileTimeout = 5000;
+			unsigned long fileMillis = millis();
+			byte buff[255];
+			byte b;
+			if (file) {
+				file.close();
+			}
+			SD.remove("0.VPL");
+			file = SD.open("0.VPL", FILE_WRITE);
+
+			//TODO:
+			while(millis() - fileMillis < fileTimeout ) {
+				b = 0;
+				if (Serial.available() > 0) {
+					fileMillis = millis();
+					b = Serial.readBytes(buff, 255);
+				}
+				if (Serial1.available() > 0)  {
+					fileMillis = millis();
+					b = Serial1.readBytes(buff, 255);
+				}
+
+				if(b) {
+					if (file) {
+						//Serial.write(buff, b);
+						file.write(buff, b);
+					} else {
+						break;
+					}
+				}
+			}
+			lcd.setCursor(0, 0);
+			if (file) {
+				file.close();
+				lcd.print(F("TRANSFER DONE"));
+
+				file = SD.open("/");
+				printDirectory(file, 0);
+				file.close();
+			}
+			else {
+				lcd.print(F("TRANSFER ERROR"));
+			}
+			//delay(OK_DELAY);
+			//Menu.enable(true);
+			uiState = 0;
 		}
 
 
