@@ -108,7 +108,7 @@ def writeHex(x, y, s):
             logFileHex = open('log.vpl', 'wb+')
         logFileHex.write(struct.pack('i', x))
         logFileHex.write(struct.pack('i', y))
-        s = 1
+        #s = 1
         logFileHex.write(struct.pack('i', s))
         #logFileHex.write(x + y +  '0\n')
         
@@ -495,7 +495,7 @@ class v_plotterHW:
         
     @staticmethod
     def scrollToXY2(x, y, s):
-    
+        
         writeHex(x, y, s)
         
                 
@@ -825,10 +825,11 @@ class v_plotter:
     @staticmethod
     def vPlottSVGlines(paths):
        
-
+        
         for path in paths:
-        #print path
+            print path
             v_plotterHW.sprayGPIO2(False)
+            #v_plotterHW.sprayGPIO2(True)
             
             #time.sleep(1)
             l =  path.length(error=1e-5) * SVG_RATIO

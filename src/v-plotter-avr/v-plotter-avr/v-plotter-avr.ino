@@ -526,7 +526,7 @@ MENU_ITEM vpGoToXY0_control   = 	{ {"GOTO LEFTUP!"},  ITEM_ACTION, 0,        MEN
 MENU_ITEM vpGoToXY1_control   = 	{ {"GOTO RIGHTDOWN!"},  ITEM_ACTION, 0,        MENU_TARGET(&uiVpGoToXY1) };
 MENU_ITEM vpGoToinit_control   = 	{ {"GOTO INIT!"},  ITEM_ACTION, 0,        MENU_TARGET(&uiVpGoToInit) };
 
-MENU_VALUE fileIndex_value={ TYPE_UINT,  15,    0,    MENU_TARGET(&fileIndex), FILEINDEX_ADDR  };
+MENU_VALUE fileIndex_value={ TYPE_UINT,  FILES_NUM,    0,    MENU_TARGET(&fileIndex), FILEINDEX_ADDR  };
 MENU_ITEM fileIndex_item   =		{ {"SELECT FILE"},    ITEM_VALUE,  0,        MENU_TARGET(&fileIndex_value) };
 
 

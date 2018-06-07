@@ -1,4 +1,4 @@
-X_BASE = 1500 #3000 #3000 # 4000 #1400 # distance between drives (width) [mm]
+X_BASE = 1800 #1500 #3000 #3000 # 4000 #1400 # distance between drives (width) [mm]
 Y_BASE = 2000 #1400 # distance between drives and ground (height) [mm], only limitation, all parameters are calculated from X_BASE
 
 DRIVE_L_START_DISTANCE = 2500 #1100 #X_BASE # initial distance for drive A [mm]
@@ -46,6 +46,8 @@ if Y_SIZE > Y_BASE:
         
 X_0 = int(X_BASE * 0.3) # X offset from drive L [mm]
 Y_0 = int(X_BASE * 0.25) # Y offset from drive L [mm]
+
+X_0 = 350
 
 if Y_0 > Y_BASE:
         print "Error: Y_BASE is lower than optimal printing area offset!"
