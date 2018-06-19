@@ -93,12 +93,23 @@ const byte LCD_COLS = 16;
 #define MESSAGE_CMD_SETX 		"X"
 #define MESSAGE_CMD_SETY 		"Y"
 #define MESSAGE_CMD_SETZ 		"Z"
-#define MESSAGE_CMD_EXE 		"E"
+#define MESSAGE_CMD_GO 		"G"
 #define MESSAGE_CMD_SETL 		"L"
 #define MESSAGE_CMD_SETR 		"R"
 #define MESSAGE_CMD_SCROLL 		"S"
 
 #define MESSAGE_CMD_FILE 		"#F"
+
+//https://github.com/euphy/polargraph/wiki/Polargraph-machine-commands-and-responses
+#define MESSAGE_PG_C01			"C01" //C01,<l>,<r>,END
+//#define MESSAGE_PG_C09			"C09" //C09,<l>,<r>,END
+#define MESSAGE_PG_C17			"C17" //C17,<l>,<r>,<line segment length>,END
+#define MESSAGE_PG_C13			"C13" //C13,[<servo position>,]END //drawing
+#define MESSAGE_PG_C14			"C14" //C14,[<servo position>,]END //not drawing
+#define MESSAGE_PG_C17			"C17" //C17,<l>,<r>,<line segment length>,END
+#define MESSAGE_PG_END			"END" //C01,<l>,<r>,END
+// response
+#define MESSAGE_PG_READY		"READY"
 
 #define UISTATE_MAIN 		0
 #define UISTATE_FILELIST 	1
@@ -694,8 +705,20 @@ void setup() {
 	pinMode(12, INPUT);
 	pinMode(13, INPUT);
 
-	Serial.begin(115200);
+	Serial.begin(57600);
+	//Serial.begin(115200);
 	while(!Serial);
+
+#define MC_MEGA 2
+#define MICROCONTROLLER MC_MEGA
+#define READY_STR "READY_100"
+
+	Serial.println("POLARGRAPH ON!");
+	Serial.print("Hardware: ");
+	Serial.println(MICROCONTROLLER);
+	Serial.println("MC_MEGA");
+	Serial.println(READY_STR);
+
 	//Serial1.begin(115200);
 	Serial1.begin(9600);
 	while(!Serial1);
@@ -856,6 +879,10 @@ void loop() {
 		}
 		secToggle ? secToggle = false : secToggle = true;
 		millisecondsPrev = millis();
+
+		if(max(leftPuls, rightPuls)==0) {
+				Serial.println(READY_STR);
+		}
 	}
 
 	if (!Menu.shown()) {
@@ -1143,7 +1170,7 @@ void loop() {
 		if (pos >= 0) {
 			zComm = text.substring(pos + strlen(MESSAGE_CMD_SETZ)).toInt();
 		}
-		pos = text.indexOf(MESSAGE_CMD_EXE);
+		pos = text.indexOf(MESSAGE_CMD_GO);
 		if (pos >= 0) {
 			servoPrintPos = zComm;
 			servo.write(servoPrintPos);
@@ -1238,6 +1265,50 @@ void loop() {
 			uiState = 0;
 		}
 
+		https://github.com/euphy/polargraph/wiki/Polargraph-machine-commands-and-responses
+		pos = max(text.indexOf(MESSAGE_PG_C01), text.indexOf(MESSAGE_PG_C17));
+		if (pos >= 0) {
+			//lComm = text.substring(pos + strlen(MESSAGE_PG_C01+1)).toInt();
+			//String s = text.substring(pos + strlen(MESSAGE_PG_C01) + 1);
+			//lComm = s.toInt();
+			//text.substring(pos + strlen(MESSAGE_PG_C01) + 1 + s.length() + 1);
+			lComm = text.substring(pos + strlen(MESSAGE_PG_C01) + 1).toInt();
+			//Serial.println(text.substring(pos + strlen(MESSAGE_PG_C01) + 1));
+			//text.indexOf(pos + strlen(MESSAGE_PG_C01) + 1, ',');
+			rComm = text.substring(text.indexOf(',', pos + strlen(MESSAGE_PG_C01) + 1) + 1).toInt();
+			//Serial.println(text.substring(text.indexOf(',', pos + strlen(MESSAGE_PG_C01) + 1)+1));
+			//rComm = text.substring(pos + strlen(MESSAGE_PG_C01) + 1 + lComm/10 + 1).toInt();
+			//Serial.println(lComm);
+			//Serial.println(rComm);
+			vpScrollTo(lComm, rComm);
+			//Serial.println(READY_STR);
+		}
+		pos = text.indexOf(MESSAGE_PG_C13);
+		if (pos >= 0) {
+			servoPrintPos = servoPrintOnPos;
+			servo.write(servoPrintPos);
+			delay(servoPrintDelay);
+			//Serial.println(READY_STR);
+		}
+		pos = text.indexOf(MESSAGE_PG_C14);
+		if (pos >= 0) {
+			servoPrintPos = servoPrintOffPos;
+			servo.write(servoPrintPos);
+			delay(servoPrintDelay);
+			//Serial.println(READY_STR);
+		}
+
+		/*if(max(leftPuls, rightPuls)==0) {
+			Serial.println(READY_STR);
+		}*/
+
+		/*
+		pos = text.indexOf(MESSAGE_PG_C09);
+		if (pos >= 0) {
+			vpScrollTo(leftInitLength, rightInitLength);
+		}
+		*/
+
 
 		if (text.indexOf(MESSAGE_CMD_REQUEST)!=-1 ) {
 
@@ -1290,7 +1361,8 @@ void loop() {
   			//Serial.println();
   			//Serial.println();
    		}
-  	}
+
+	}
 }
 
 void uiOK(){

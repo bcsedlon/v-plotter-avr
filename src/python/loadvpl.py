@@ -7,7 +7,7 @@ class growmat_easy:
     
     # configure the serial connections (the parameters differs on the device you are connecting to)
     port='/dev/ttyUSB1'
-    port='COM2'
+    port='COM43'
 
     ser = None
     
@@ -143,7 +143,7 @@ if __name__ == "__main__":
     
     # configure the serial connections (the parameters differs on the device you are connecting to)
     port='/dev/ttyUSB1'
-    port='COM2'
+    port='COM43'
     
     g = growmat_easy() 
     g.connect(port)
