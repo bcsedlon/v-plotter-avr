@@ -24,7 +24,7 @@ class growmat_easy:
         '''
         self.ser = serial.Serial()
         self.ser.port = port
-        self.ser.baudrate = 115200 #9600
+        self.ser.baudrate = 57600#115200 #9600
         self.ser.parity=serial.PARITY_NONE
         self.ser.stopbits=serial.STOPBITS_ONE
         #self.ser.timeout = 1
@@ -140,10 +140,10 @@ import sys
 
 
 if __name__ == "__main__":
-    
+
     # configure the serial connections (the parameters differs on the device you are connecting to)
     port='/dev/ttyUSB1'
-    port='COM43'
+    port='COM2'
     
     g = growmat_easy() 
     g.connect(port)

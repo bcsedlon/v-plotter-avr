@@ -12,6 +12,8 @@
  */
 
 //#define __RTC__
+//#define STEPS_ACC 16
+int rightAcc, rightAccSkip, leftAcc, leftAccSkip;
 
 #define TEXT_ID0 "GRAFFITIBOT"
 #define TEXT_ID1 "V-PLOTTER-AVR"
@@ -81,6 +83,7 @@ const byte LCD_COLS = 16;
 #define SERVOPRINTDELAY_ADDR	56
 #define SERVOPRINTOFFPOS_ADDR	60
 #define SERVOPRINTONPOS_ADDR	64
+#define ACCELERATION_ADDR	68
 
 #define MESSAGE_CMD_REQUEST  	"?"
 
@@ -144,6 +147,7 @@ char fileNames[FILES_NUM][16];
 int fileNamesIndex;
 File file;
 bool sd = false;
+byte fileMode;
 
 byte secondsCounter;
 
@@ -178,7 +182,7 @@ bool printOn, printOff;
 // parameters
 unsigned int pulSpeed, scale, fileIndex, distance, leftInitLength, printTime;
 unsigned int pulSpeedPrev; //, distancePrev;
-
+unsigned int pulAcceleration = 0;
 int x0, y0;
 
 int xComm, yComm, zComm;
@@ -495,6 +499,8 @@ MENU_ITEM y0_item   =			{ {"Y0[mm]"},    ITEM_VALUE,  0,        MENU_TARGET(&y0_
 
 MENU_VALUE speed_value={ TYPE_UINT,  0,    0,    MENU_TARGET(&pulSpeed), SPEED_ADDR };
 MENU_ITEM speed_item   =			{ {"SPEED"},    ITEM_VALUE,  0,        MENU_TARGET(&speed_value) };
+MENU_VALUE acceleration_value={ TYPE_UINT,  0,    0,    MENU_TARGET(&pulAcceleration), ACCELERATION_ADDR };
+MENU_ITEM acceleration_item   =			{ {"ACCELERATION"},    ITEM_VALUE,  0,        MENU_TARGET(&acceleration_value) };
 
 MENU_VALUE printTime_value={ TYPE_UINT,  0,    0,    MENU_TARGET(&printTime), PRINTTIME_ADDR };
 MENU_ITEM printTime_item   =			{ {"PRINT TIME[ms]"},    ITEM_VALUE,  0,        MENU_TARGET(&printTime_value) };
@@ -519,7 +525,7 @@ MENU_ITEM servoPrintOnPos_item   =			{ {"SERVO PRINT POS"},    ITEM_VALUE,  0,  
 MENU_ITEM item_reset   = 			{ {"RESET DEFAULTS!"},  ITEM_ACTION, 0,        MENU_TARGET(&uiResetAction) };
 //MENU_ITEM item_info   = { {"INFO->"},  ITEM_ACTION, 0,        MENU_TARGET(&uiInfo) };
 
-MENU_LIST const submenu_list5[] = {&speed_item, &distance_item, &x0_item, &y0_item, &leftInitLength_item, &scale_item, &leftDirInv_item, &rightDirInv_item, &printInv_item, &printMode_item, &printTime_item, &servoPrintDelay_item, &servoPrintOffPos_item, &servoPrintOnPos_item, &item_reset};
+MENU_LIST const submenu_list5[] = {&speed_item, &acceleration_item, &distance_item, &x0_item, &y0_item, &leftInitLength_item, &scale_item, &leftDirInv_item, &rightDirInv_item, &printInv_item, &printMode_item, &printTime_item, &servoPrintDelay_item, &servoPrintOffPos_item, &servoPrintOnPos_item, &item_reset};
 //MENU_LIST const submenu_list5[] = {&distance_item, &x0_item, &y0_item, &leftInitLength_item, &scale_item, &speed_item, &leftDirInv_item, &rightDirInv_item, &printInv_item, &printMode_item, &item_reset};
 
 MENU_ITEM menu_submenu5 = 			{ {"SETTINGS->"},  ITEM_MENU,  MENU_SIZE(submenu_list5),  MENU_TARGET(&submenu_list5) };
@@ -830,8 +836,11 @@ void vpScrollTo(unsigned long l, unsigned long r) {
 	leftDirAuto = vp.getDirection(l, vp.getLength(leftPulsPos));
 	rightDirAuto = vp.getDirection(r, vp.getLength(rightPulsPos));
 
+	leftAccSkip = pulAcceleration;
+	rightAccSkip = pulAcceleration;
 	leftPuls = vp.getStepsTo(l, vp.getLength(leftPulsPos));
 	rightPuls = vp.getStepsTo(r, vp.getLength(rightPulsPos));
+
 /*
 	Serial.print(vp.getLength(leftPulsPos));
 	Serial.print('\t');
@@ -1007,7 +1016,11 @@ void loop() {
 						}
 					}
 
-					vpGoToXY(x, y);
+					if(fileMode == 1)
+						vpGoToXY(x, y);
+					if(fileMode == 2)
+						vpScrollTo(x, y);
+
 					if(p == 1) {
 						//print PULSE
 						bPrint = true;
@@ -1446,6 +1459,7 @@ void uiPrintFileStop() {
 		file.close();
 }
 
+
 void uiPrintFileStart() {
 
 	//lcd.noBacklight();
@@ -1466,6 +1480,10 @@ void uiPrintFileStart() {
 
 	if (file) {
 		//uiState = UISTATE_PRINTING;
+		//fileMode = file.read();
+		fileMode = 1; //default ".bxy"
+		if(strstr(fileNames[fileIndex], ".blr"))
+			fileMode = 2;
 		uiState = UISTATE_INFO;
 		uiPage = 0;
 		state = STATE_RUNNING;
@@ -2040,11 +2058,13 @@ void uiMain() {
 void leftGo(bool dir, unsigned int puls) {
 	leftDirAuto = dir;
 	leftPuls = puls;
+	leftAccSkip = 0;//STEPS_ACC;
 }
 
 void rightGo(bool dir, unsigned int puls) {
 	rightDirAuto = dir;
 	rightPuls = puls;
+	rightAccSkip = 0;//STEPS_ACC;
 }
 
 void printGo(unsigned int duration) {
@@ -2063,6 +2083,7 @@ void printGo(unsigned int duration) {
 /// --------------------------
 /// Custom ISR Timer Routine
 /// --------------------------
+
 void timerIsr()
 {
 	if(stop) {
@@ -2094,11 +2115,49 @@ void timerIsr()
 	if(servoPrintMoving)
 		return;
 
-	rightPulAuto ^= bool(rightPuls);
-	rightPuls -= bool(rightPuls);
+	//rightPulAuto ^= bool(rightPuls);
+	//rightPuls -= bool(rightPuls);
+	//leftPulAuto ^= bool(leftPuls);
+	//leftPuls -= bool(leftPuls);
 
-	leftPulAuto ^= bool(leftPuls);
-	leftPuls -= bool(leftPuls);
+	if(rightAcc < rightAccSkip) {
+		rightAcc++;
+	}
+	else {
+		rightAcc = 0;
+		rightAccSkip = max(0, rightAccSkip - 1);
+		//Serial.print("rightAcc: ");
+		//Serial.println(rightAcc);
+		//Serial.print("rightAccSkip: ");
+		//Serial.println(rightAccSkip);
+
+		rightPulAuto ^= bool(rightPuls);
+		rightPuls -= bool(rightPuls);
+
+		if(rightPuls) {
+			if(rightDirAuto)
+				rightPulsPos++;
+			else
+				rightPulsPos--;
+		}
+	}
+
+	if(leftAcc < leftAccSkip) {
+		leftAcc++;
+	}
+	else {
+		leftAcc = 0;
+		leftAccSkip = max(0, leftAccSkip - 1);
+		leftPulAuto ^= bool(leftPuls);
+		leftPuls -= bool(leftPuls);
+
+		if(leftPuls) {
+			if(leftDirAuto)
+				leftPulsPos++;
+			else
+				leftPulsPos--;
+		}
+	}
 
 	digitalWrite(R_DIR_PIN, rightDirInv? rightDirAuto : !rightDirAuto);
 	digitalWrite(R_PUL_PIN, !rightPulAuto);
@@ -2106,17 +2165,26 @@ void timerIsr()
 	digitalWrite(L_PUL_PIN, !leftPulAuto);
 
 
-	if(rightPuls) {
+
+/*
+	if(rightPuls && !rightAccSkip) {
 		if(rightDirAuto)
 			rightPulsPos++;
 		else
 			rightPulsPos--;
 	}
-	if(leftPuls) {
+	if(leftPuls && !leftAccSkip) {
 		if(leftDirAuto)
 			leftPulsPos++;
 		else
 			leftPulsPos--;
+	}
+*/
+	if(rightPuls < pulAcceleration) {
+		rightAccSkip = min(pulAcceleration - rightPuls, pulAcceleration);
+	}
+	if(leftPuls < pulAcceleration) {
+		leftAccSkip = min(pulAcceleration - leftPuls, pulAcceleration);
 	}
 
 	millisPrint = millis();
