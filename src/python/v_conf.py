@@ -5,8 +5,11 @@ DRIVE_L_START_DISTANCE = 2500 #1100 #X_BASE # initial distance for drive A [mm]
 DRIVE_R_START_DISTANCE = 2500 #1100 #X_BASE # initial distance for drive B [mm]
 
 #matrix print
-S_STEP_DISTANCE = 5#20 #10 #10 # static step distance [mm], for passive drive 
-D_STEP_DISTANCE = 5#20 # 10 #10 # dynamic step distance [mm], for active drive 
+S_STEP_DISTANCE = 1#5#20 #10 #10 # static step distance [mm], for passive drive 
+D_STEP_DISTANCE = 1#5#20 # 10 #10 # dynamic step distance [mm], for active drive 
+
+L_COLOR_LIMIT = -150
+R_COLOR_LIMIT = -150
 
 #vector print
 L_STEP_DISTANCE = 2#5 #10 #step for curve drawings [mm]

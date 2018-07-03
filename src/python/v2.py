@@ -32,6 +32,9 @@ LOG = v_conf.LOG
 LOGHEX_XY = v_conf.LOGHEX_XY
 LOGHEX_LR = v_conf.LOGHEX_LR
 
+L_COLOR_LIMIT = v_conf.L_COLOR_LIMIT
+R_COLOR_LIMIT = v_conf.R_COLOR_LIMIT
+
 PRU_ENABLED = False #v_conf.PRU_ENABLE
 DRIVE_IN_PARALLEL = False #v_conf.DRIVE_IN_PARALLEL
 SPRAY_IN_PARALLEL = False #v_conf.SPRAY_IN_PARALLEL
@@ -676,6 +679,13 @@ class v_plotter:
         c = sum(l) / len(l)
         #print r, g, b
         #if r < limit or g < limit or b < limit:
+        
+        if(colorLimit < 0):
+            colorLimit = -colorLimit
+            if c > colorLimit:
+                return True
+            else:
+                return False
         if c < colorLimit:
                 return True
         else:
@@ -1211,7 +1221,7 @@ class gui:
                 print "> Plott"
                 print "> Press Enter to pause"
                 
-                v_plotter.vPlott(inputPattern.getImage(filename), 150, 150)
+                v_plotter.vPlott(inputPattern.getImage(filename), L_COLOR_LIMIT, R_COLOR_LIMIT)
                 
             if displayMenu == 11:
                 outputMap.calculate()
@@ -1683,7 +1693,7 @@ logFileLR = open(fileNameLR, 'w')
     
 outputMap.init()
 #v_plotter.vPlottSVGlines(inputPatternSVG.getSVGpaths(fileName))
-v_plotter.vPlott(inputPattern.getImage(fileName), 150, 150)
+v_plotter.vPlott(inputPattern.getImage(fileName), L_COLOR_LIMIT, R_COLOR_LIMIT)
 
 logFileHexXY.close()
 logFileHexLR.close() 
