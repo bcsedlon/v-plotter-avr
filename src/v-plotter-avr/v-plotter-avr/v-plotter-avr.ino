@@ -101,7 +101,8 @@ const byte LCD_COLS = 16;
 #define MESSAGE_CMD_SETR 		"R"
 #define MESSAGE_CMD_SCROLL 		"S"
 
-#define MESSAGE_CMD_FILE 		"#F"
+#define MESSAGE_CMD_FILEPUT		"#FPUT"
+#define MESSAGE_CMD_FILENAME	"#FNAME="
 
 //https://github.com/euphy/polargraph/wiki/Polargraph-machine-commands-and-responses
 #define MESSAGE_PG_C01			"C01" //C01,<l>,<r>,END
@@ -145,6 +146,7 @@ byte state = 0;
 #define  FILES_NUM 32
 char fileNames[FILES_NUM][16];
 int fileNamesIndex;
+char fileName[16];
 File file;
 bool sd = false;
 byte fileMode;
@@ -1221,14 +1223,26 @@ void loop() {
 			//Serial.println();
 		}
 
-		pos = text.indexOf(MESSAGE_CMD_FILE);
+		pos = text.indexOf(MESSAGE_CMD_FILENAME);
+		if (pos >= 0) {
+			text.substring(pos + strlen(MESSAGE_CMD_FILENAME)).toCharArray(fileName, 16);
+		}
+
+		pos = text.indexOf(MESSAGE_CMD_FILEPUT);
 		if (pos >= 0 && sd) {
 			//pos + strlen(MESSAGE_CMD_FILE)
+
+			if(fileName[0] == 0) {
+				fileName[0] = '0.BLR';
+				fileName[1] = 0;
+			}
 
 			Menu.enable(false);
 			lcd.clear();
 			lcd.setCursor(0, 0);
 			lcd.print(F("FILE TRANSFER"));
+			lcd.setCursor(0, 1);
+			lcd.print(fileName);
 
 			unsigned long fileTimeout = 5000;
 			unsigned long fileMillis = millis();
@@ -1237,8 +1251,10 @@ void loop() {
 			if (file) {
 				file.close();
 			}
-			SD.remove("0.VPL");
-			file = SD.open("0.VPL", FILE_WRITE);
+			//SD.remove("0.VPL");
+			//file = SD.open("0.VPL", FILE_WRITE);
+			SD.remove(fileName);
+			file = SD.open(fileName, FILE_WRITE);
 
 			//TODO:
 			while(millis() - fileMillis < fileTimeout ) {
@@ -1482,7 +1498,7 @@ void uiPrintFileStart() {
 		//uiState = UISTATE_PRINTING;
 		//fileMode = file.read();
 		fileMode = 1; //default ".bxy"
-		if(strstr(fileNames[fileIndex], ".blr"))
+		if(strcasestr(fileNames[fileIndex], ".BLR"))
 			fileMode = 2;
 		uiState = UISTATE_INFO;
 		uiPage = 0;
