@@ -752,6 +752,7 @@ class v_plotter:
         
     @staticmethod                                    
     def vPlottL(rgbImage, colorLimit):
+        bLastSpray = False
         for Ll in xrange(D_0, D_1 + 1, S_STEP_DISTANCE):
             v_plotterHW.sprayGPIO2(False)
             for Rl in xrange(D_1, D_0 -1, -D_STEP_DISTANCE):
@@ -763,16 +764,22 @@ class v_plotter:
                             return
                         
                     x = int(v_plotter.getX(Ll, Rl))
+                    
                     if x >= 0 and x < X_SIZE:
                         y = int(v_plotter.getY(Ll, Rl))
                         if y >= 0 and y < Y_SIZE:
                             if v_plotter.getPixel(x, y, rgbImage, colorLimit):
                                 #v_plotterHW.scrollTo(Ll, Rl)
-                                if v_plotterHW.bSpray:
-                                    v_plotterHW.scrollTo2(Ll, Rl, SPRAY_START)
-                                else:
+                                #if v_plotterHW.bSpray:
+                                #    v_plotterHW.scrollTo2(Ll, Rl, SPRAY_START)
+                                #else:
+                                #    v_plotterHW.scrollTo2(Ll, Rl, SPRAY_STOP)
+                                #bLastSpray = True
+ 
+                                if bLastSpray == False:
                                     v_plotterHW.scrollTo2(Ll, Rl, SPRAY_STOP)
-
+                                v_plotterHW.scrollTo2(Ll, Rl, SPRAY_START)
+                                bLastSpray = True
                                 
                                 #if SPRAY_IN_PARALLEL:
                                 #    tS = Thread(target=v_plotterHW.sprayGPIO, args=(SPRAY_TIME,))
@@ -795,10 +802,12 @@ class v_plotter:
                                 v_plotterHW.sprayGPIO2(True)  
                             else:
                                 v_plotterHW.sprayGPIO2(False)  
+                                bLastSpray = False
                                   
 
     @staticmethod
     def vPlottR(rgbImage, colorLimit):
+        bLastSpray = False
         for Rl in xrange(D_0, D_1 + 1, S_STEP_DISTANCE):
                 v_plotterHW.sprayGPIO2(False)
                 for Ll in xrange(D_1, D_0 -1, -D_STEP_DISTANCE):
@@ -810,16 +819,20 @@ class v_plotter:
                             return
 
                     x = int(v_plotter.getX(Ll, Rl))
+                    
                     if x >= 0 and x < X_SIZE:
                         y = int(v_plotter.getY(Ll, Rl))
                         if y >= 0 and y < Y_SIZE:
                             if v_plotter.getPixel(x, y, rgbImage, colorLimit):
                                 #v_plotterHW.scrollTo2(Ll, Rl)
-                                if v_plotterHW.bSpray:
-                                    v_plotterHW.scrollTo2(Ll, Rl, SPRAY_START)
-                                else:
+                                #if v_plotterHW.bSpray:
+                                #    v_plotterHW.scrollTo2(Ll, Rl, SPRAY_START)
+                                #else:
+                                #    v_plotterHW.scrollTo2(Ll, Rl, SPRAY_STOP)
+                                if bLastSpray == False:
                                     v_plotterHW.scrollTo2(Ll, Rl, SPRAY_STOP)
-                                
+                                v_plotterHW.scrollTo2(Ll, Rl, SPRAY_START)
+                                bLastSpray = True
                                 #if SPRAY_IN_PARALLEL:
                                 #    tS = Thread(target=v_plotterHW.sprayGPIO, args=(SPRAY_TIME,))
                                 #    tS.start()
@@ -836,7 +849,8 @@ class v_plotter:
                                         #pygame.display.flip() 
                                 v_plotterHW.sprayGPIO2(True)  
                             else:
-                                v_plotterHW.sprayGPIO2(False)  
+                                v_plotterHW.sprayGPIO2(False) 
+                                bLastSpray = False                                
                                                                                                                                 
     @staticmethod
     def vPlott(rgbImg, colorLimitL, colorLimitR):
