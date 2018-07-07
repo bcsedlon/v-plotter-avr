@@ -763,6 +763,7 @@ void setup() {
     	sd = true;
     if(sd) {
     	  file = SD.open("/");
+    	  fileNamesIndex = 0;
     	  printDirectory(file, 0);
     }
     file.close();
@@ -1283,6 +1284,7 @@ void loop() {
 				lcd.print(F("TRANSFER DONE"));
 
 				file = SD.open("/");
+				fileNamesIndex = 0;
 				printDirectory(file, 0);
 				file.close();
 			}

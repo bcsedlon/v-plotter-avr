@@ -26,6 +26,7 @@ Y_0 = v_conf.Y_0
 SPRAY_DOT = 1
 SPRAY_START = 2
 SPRAY_STOP = 3
+SPRAY_SKIP = 4
 
 LOG = v_conf.LOG
 
@@ -505,8 +506,8 @@ class v_plotterHW:
         
     @staticmethod
     def scrollTo2(Ll, Rl, s, stepTime = DRIVE_STEP_TIME):
-   
-        writeHexLR(Ll, Rl, s)
+        if s != SPRAY_SKIP:
+            writeHexLR(Ll, Rl, s)
         if v_plotterHW.bSpray:
             outputMap.sprayLine(v_plotter.getX(v_plotterHW.driveL.l, v_plotterHW.driveR.l) + X_0, (v_plotter.getY(v_plotterHW.driveL.l, v_plotterHW.driveR.l) + Y_0), v_plotter.getX(Ll, Rl) + X_0, v_plotter.getY(Ll, Rl) + Y_0)
             pygameGui.sprayLine(v_plotter.getX(v_plotterHW.driveL.l, v_plotterHW.driveR.l) + X_0, (v_plotter.getY(v_plotterHW.driveL.l, v_plotterHW.driveR.l) + Y_0), v_plotter.getX(Ll, Rl) + X_0, v_plotter.getY(Ll, Rl) + Y_0)
@@ -752,9 +753,10 @@ class v_plotter:
         
     @staticmethod                                    
     def vPlottL(rgbImage, colorLimit):
-        bLastSpray = False
+        #bLastSpray = False
         for Ll in xrange(D_0, D_1 + 1, S_STEP_DISTANCE):
             v_plotterHW.sprayGPIO2(False)
+            bLastSpray = False
             for Rl in xrange(D_1, D_0 -1, -D_STEP_DISTANCE):
                                               
                     if heardEnter():
@@ -765,9 +767,9 @@ class v_plotter:
                         
                     x = int(v_plotter.getX(Ll, Rl))
                     
-                    if x >= 0 and x < X_SIZE:
+                    if x >= 0 and x <= X_SIZE:
                         y = int(v_plotter.getY(Ll, Rl))
-                        if y >= 0 and y < Y_SIZE:
+                        if y >= 0 and y <= Y_SIZE:
                             if v_plotter.getPixel(x, y, rgbImage, colorLimit):
                                 #v_plotterHW.scrollTo(Ll, Rl)
                                 #if v_plotterHW.bSpray:
@@ -776,9 +778,12 @@ class v_plotter:
                                 #    v_plotterHW.scrollTo2(Ll, Rl, SPRAY_STOP)
                                 #bLastSpray = True
  
+                                
                                 if bLastSpray == False:
                                     v_plotterHW.scrollTo2(Ll, Rl, SPRAY_STOP)
-                                v_plotterHW.scrollTo2(Ll, Rl, SPRAY_START)
+                                    v_plotterHW.scrollTo2(Ll, Rl, SPRAY_START)
+                                else:
+                                    v_plotterHW.scrollTo2(Ll, Rl, SPRAY_SKIP)
                                 bLastSpray = True
                                 
                                 #if SPRAY_IN_PARALLEL:
@@ -802,14 +807,28 @@ class v_plotter:
                                 v_plotterHW.sprayGPIO2(True)  
                             else:
                                 v_plotterHW.sprayGPIO2(False)  
+                                if bLastSpray == True:
+                                    v_plotterHW.scrollTo2(Ll, Rl, SPRAY_START)
                                 bLastSpray = False
-                                  
+                        else:
+                            bLastSpray = False 
+                    else:
+                        bLastSpray = False 
 
+ 
+            if bLastSpray == True:
+                v_plotterHW.scrollTo2(Ll, Rl, SPRAY_START)
+            #else:
+            #    v_plotterHW.scrollTo2(Ll, Rl, SPRAY_STOP)
+        #if bLastSpray == True:
+        #    v_plotterHW.scrollTo2(Ll, Rl, SPRAY_START)
+ 
     @staticmethod
     def vPlottR(rgbImage, colorLimit):
-        bLastSpray = False
+        #bLastSpray = False
         for Rl in xrange(D_0, D_1 + 1, S_STEP_DISTANCE):
                 v_plotterHW.sprayGPIO2(False)
+                bLastSpray = False
                 for Ll in xrange(D_1, D_0 -1, -D_STEP_DISTANCE):
                     
                     if heardEnter():
@@ -820,18 +839,21 @@ class v_plotter:
 
                     x = int(v_plotter.getX(Ll, Rl))
                     
-                    if x >= 0 and x < X_SIZE:
+                    if x >= 0 and x <= X_SIZE:
                         y = int(v_plotter.getY(Ll, Rl))
-                        if y >= 0 and y < Y_SIZE:
+                        if y >= 0 and y <= Y_SIZE:
                             if v_plotter.getPixel(x, y, rgbImage, colorLimit):
                                 #v_plotterHW.scrollTo2(Ll, Rl)
                                 #if v_plotterHW.bSpray:
                                 #    v_plotterHW.scrollTo2(Ll, Rl, SPRAY_START)
                                 #else:
                                 #    v_plotterHW.scrollTo2(Ll, Rl, SPRAY_STOP)
+                                v_plotterHW.scrollTo(Ll, Rl)
                                 if bLastSpray == False:
                                     v_plotterHW.scrollTo2(Ll, Rl, SPRAY_STOP)
-                                v_plotterHW.scrollTo2(Ll, Rl, SPRAY_START)
+                                    v_plotterHW.scrollTo2(Ll, Rl, SPRAY_START)
+                                else:
+                                    v_plotterHW.scrollTo2(Ll, Rl, SPRAY_SKIP)                                    
                                 bLastSpray = True
                                 #if SPRAY_IN_PARALLEL:
                                 #    tS = Thread(target=v_plotterHW.sprayGPIO, args=(SPRAY_TIME,))
@@ -850,8 +872,18 @@ class v_plotter:
                                 v_plotterHW.sprayGPIO2(True)  
                             else:
                                 v_plotterHW.sprayGPIO2(False) 
-                                bLastSpray = False                                
-                                                                                                                                
+                                if bLastSpray == True:
+                                    v_plotterHW.scrollTo2(Ll, Rl, SPRAY_START)
+                                bLastSpray = False 
+                        else:
+                            bLastSpray = False 
+                    else:
+                        bLastSpray = False 
+                if bLastSpray == True:
+                    v_plotterHW.scrollTo2(Ll, Rl, SPRAY_START)
+                #else:
+                #    v_plotterHW.scrollTo2(Ll, Rl, SPRAY_STOP)
+                
     @staticmethod
     def vPlott(rgbImg, colorLimitL, colorLimitR):
         v_plotter.vPlottL(rgbImg, colorLimitL)
@@ -1398,7 +1430,7 @@ class gui:
                         s = int(raw_input("> Set scale [%]: "))
                         s = s / 100
                 except:
-                        s = 100
+                        s = 1
                 filename = inputPatternSVG.getFilename('./') 
                 outputMap.init()
                 pygameGui.reset()
@@ -1409,7 +1441,7 @@ class gui:
                         s = int(raw_input("> Set scale [%]: "))
                         s = s / 100
                 except:
-                        s = 100
+                        s = 1
                 filename = inputPatternSVG.getFilename('./') 
                 outputMap.init()
                 pygameGui.reset()

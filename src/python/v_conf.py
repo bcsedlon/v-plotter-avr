@@ -1,18 +1,18 @@
 X_BASE = 1800 #1500 #3000 #3000 # 4000 #1400 # distance between drives (width) [mm]
 Y_BASE = 2000 #1400 # distance between drives and ground (height) [mm], only limitation, all parameters are calculated from X_BASE
 
-DRIVE_L_START_DISTANCE = 2500 #1100 #X_BASE # initial distance for drive A [mm]
-DRIVE_R_START_DISTANCE = 2500 #1100 #X_BASE # initial distance for drive B [mm]
+DRIVE_L_START_DISTANCE = 1500 #1100 #X_BASE # initial distance for drive A [mm]
+DRIVE_R_START_DISTANCE = 1500 #1100 #X_BASE # initial distance for drive B [mm]
 
 #matrix print
-S_STEP_DISTANCE = 1#5#20 #10 #10 # static step distance [mm], for passive drive 
-D_STEP_DISTANCE = 1#5#20 # 10 #10 # dynamic step distance [mm], for active drive 
+S_STEP_DISTANCE = 5#20 #10 #10 # static step distance [mm], for passive drive 
+D_STEP_DISTANCE = 5#20 # 10 #10 # dynamic step distance [mm], for active drive 
 
-L_COLOR_LIMIT = -150
-R_COLOR_LIMIT = -150
+L_COLOR_LIMIT = 80
+R_COLOR_LIMIT = 160
 
 #vector print
-L_STEP_DISTANCE = 2#5 #10 #step for curve drawings [mm]
+L_STEP_DISTANCE = 5#5 #10 #step for curve drawings [mm]
 
 #X_BASE =3000, SVG vikipan1
 SVG_RATIO = 0.5 #0.75
@@ -50,7 +50,7 @@ if Y_SIZE > Y_BASE:
         
 X_0 = int(X_BASE * 0.3) # X offset from drive L [mm]
 Y_0 = int(X_BASE * 0.25) # Y offset from drive L [mm]
-
+Y_0 = 600
 X_0 = 350
 
 if Y_0 > Y_BASE:

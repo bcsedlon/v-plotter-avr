@@ -1,0 +1,9 @@
+cp ~/storage/shared/Pencil_Sketch/*.jpg ~/.shortcuts/imgs
+cp ~/storage/shared/Pencil_Sketch/*.jpg ~/.shortcuts/img.jpg
+rm ~/storage/shared/Pencil_Sketch/*.jpg
+python2 ~/.shortcuts/v2.py img.jpg
+#python2 ~/.shortcuts/droidload.py
+cp ~/.shortcuts/img.jpg.png ~/storage/shared/Pencil_Sketch/
+cp ~/.shortcuts/img.jpg.blr ~/storage/shared/Pencil_Sketch/1.BLR
+python2 ~/storage/shared/Pencil_Sketch/l.py ~/storage/shared/Pencil_Sketch/1.BLR
+
